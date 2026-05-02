@@ -59,9 +59,15 @@ export default async function ListingDetailPage({
         <aside className="lg:sticky lg:top-8 lg:self-start">
           <div className="rounded-2xl border border-ink-line p-6">
             <div className="text-3xl font-semibold tabular-nums">{formatPrice(listing.price)}</div>
-            <button className="mt-6 w-full rounded-full bg-ink py-3 text-sm font-medium text-white hover:bg-ink-soft">
-              Message seller
-            </button>
+            <form action="/messages/start" method="post" className="mt-6">
+              <input type="hidden" name="listingId" value={listing.id} />
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-3 text-sm font-medium text-white hover:bg-ink-soft"
+              >
+                Message seller
+              </button>
+            </form>
             <button className="mt-2 w-full rounded-full border border-ink-line py-3 text-sm hover:border-ink">
               Save
             </button>
