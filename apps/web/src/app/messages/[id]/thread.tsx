@@ -53,9 +53,29 @@ export function Thread({
           },
           (payload) => {
             const incoming = payload.new as SentMessage;
-            setMessages((prev) =>
-              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
-            );
+            setMessages((prev) => {
+              // Already have it (e.g. from the action's response).
+              if (prev.some((m) => m.id === incoming.id)) return prev;
+
+              // If this is my own message coming back over Realtime, look for
+              // the matching temp bubble and swap it in place — preserves
+              // visual order and prevents the brief temp+real overlap.
+              if (incoming.sender_id === meId) {
+                const tempIdx = prev.findIndex(
+                  (m) =>
+                    m.id.startsWith("tmp_") &&
+                    m.sender_id === meId &&
+                    m.body === incoming.body,
+                );
+                if (tempIdx >= 0) {
+                  const next = prev.slice();
+                  next[tempIdx] = incoming;
+                  return next;
+                }
+              }
+
+              return [...prev, incoming];
+            });
           },
         )
         .subscribe();
