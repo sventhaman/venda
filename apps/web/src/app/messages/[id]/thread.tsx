@@ -54,20 +54,17 @@ export function Thread({
     };
   }, [conversationId]);
 
-  // Auto-scroll to the bottom when a message lands.
+  // Scroll the page so the latest message is visible above the sticky composer.
   useEffect(() => {
-    scrollerRef.current?.scrollTo({
-      top: scrollerRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    scrollerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] flex-col">
-      <div ref={scrollerRef} className="flex-1 overflow-y-auto px-1 py-4">
+    <div className="flex flex-col">
+      <div ref={scrollerRef} className="min-h-[40vh] py-4">
         {messages.length === 0 ? (
-          <p className="mt-12 text-center text-sm text-ink-mute">
-            No messages yet — say hello.
+          <p className="my-12 text-center text-sm text-ink-mute">
+            No messages yet — type below to say hello.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -88,7 +85,7 @@ export function Thread({
             else setError(res.error ?? "Send failed");
           });
         }}
-        className="border-t border-ink-line bg-white px-1 pt-3"
+        className="sticky bottom-0 -mx-6 border-t border-ink-line bg-white/95 px-6 pb-4 pt-3 backdrop-blur"
       >
         <div className="flex items-end gap-2">
           <textarea
