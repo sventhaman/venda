@@ -14,14 +14,17 @@ export async function Header() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let displayName: string | null = null;
+  let avatarUrl: string | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("display_name, handle")
+      .select("display_name, handle, avatar_url")
       .eq("id", user.id)
       .maybeSingle();
     displayName = profile?.display_name ?? profile?.handle ?? user.email ?? "Account";
+    avatarUrl = profile?.avatar_url ?? null;
   }
+  const initial = (displayName ?? "?").trim().charAt(0).toUpperCase() || "?";
 
   return (
     <header className="border-b border-ink-line bg-white">
@@ -44,6 +47,9 @@ export async function Header() {
               <Link href="/account/listings" className="text-ink-mute hover:text-ink">
                 My listings
               </Link>
+              <Link href="/account/saved" className="text-ink-mute hover:text-ink">
+                Saved
+              </Link>
               <Link href="/developers/keys" className="text-ink-mute hover:text-ink">
                 API keys
               </Link>
@@ -52,9 +58,17 @@ export async function Header() {
               </Link>
               <Link
                 href="/account"
-                className="rounded-full border border-ink-line px-4 py-1.5 hover:border-ink"
+                className="flex items-center gap-2 rounded-full border border-ink-line py-1 pl-1 pr-3 hover:border-ink"
               >
-                {displayName}
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink-fog text-xs font-medium text-ink-mute">
+                    {initial}
+                  </span>
+                )}
+                <span className="hidden lg:inline">{displayName}</span>
               </Link>
               <Link
                 href="/new"

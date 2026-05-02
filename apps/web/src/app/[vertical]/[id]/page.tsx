@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getListing } from "@/lib/api";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { MessageSellerButton } from "@/components/message-seller-button";
+import { SaveButton } from "@/components/save-button";
 import { createClient } from "@/lib/supabase/server";
 import { deleteListing } from "@/app/account/listings/actions";
 
@@ -18,6 +19,19 @@ export default async function ListingDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isSeller = user?.id === listing.sellerId;
+
+  // Has the current user already saved this listing? RLS limits the favorites
+  // table to (auth.uid() = user_id), so this is a no-op for anon.
+  let initialSaved = false;
+  if (user) {
+    const { data: fav } = await supabase
+      .from("listing_favorites")
+      .select("listing_id")
+      .eq("user_id", user.id)
+      .eq("listing_id", listing.id)
+      .maybeSingle();
+    initialSaved = !!fav;
+  }
 
   const where = [listing.location?.city, listing.location?.region, listing.location?.country]
     .filter(Boolean)
@@ -94,9 +108,13 @@ export default async function ListingDetailPage({
                 <div className="mt-6">
                   <MessageSellerButton listingId={listing.id} />
                 </div>
-                <button className="mt-2 w-full rounded-full border border-ink-line py-3 text-sm hover:border-ink">
-                  Save
-                </button>
+                <div className="mt-2">
+                  <SaveButton
+                    listingId={listing.id}
+                    initialSaved={initialSaved}
+                    signedIn={!!user}
+                  />
+                </div>
               </>
             )}
 
