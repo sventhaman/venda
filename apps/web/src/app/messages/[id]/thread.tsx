@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, type SentMessage } from "./actions";
 
@@ -15,13 +16,28 @@ export function Thread({
   meId: string;
   initial: SentMessage[];
 }) {
-  // Single source of truth. We append a temp message on submit (with a
-  // tempId), and on the action's response we drop the temp and add the real
-  // row — unless Realtime already added it, in which case we just drop
-  // the temp. Same dedupe handles every ordering of (action ↔ realtime).
   const [messages, setMessages] = useState<LocalMessage[]>(initial);
 
-  const [pending, startTransition] = useTransition();
+  // useOptimistic renders during a transition (which a <form action={fn}>
+  // implicitly is in React 19), so the temp bubble appears instantly. The
+  // reducer dedupes by body+sender+recent-timestamp so when Realtime delivers
+  // the real row mid-transition, we don't show temp + real briefly.
+  const [optimisticMessages, addOptimistic] = useOptimistic(
+    messages,
+    (current, msg: LocalMessage) => {
+      const hasMatchingReal = current.some(
+        (m) =>
+          !m.pending &&
+          m.sender_id === msg.sender_id &&
+          m.body === msg.body &&
+          Math.abs(
+            new Date(m.created_at).getTime() - new Date(msg.created_at).getTime(),
+          ) < 60_000,
+      );
+      if (hasMatchingReal) return current;
+      return [...current, msg];
+    },
+  );
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const tailRef = useRef<HTMLDivElement>(null);
@@ -53,29 +69,9 @@ export function Thread({
           },
           (payload) => {
             const incoming = payload.new as SentMessage;
-            setMessages((prev) => {
-              // Already have it (e.g. from the action's response).
-              if (prev.some((m) => m.id === incoming.id)) return prev;
-
-              // If this is my own message coming back over Realtime, look for
-              // the matching temp bubble and swap it in place — preserves
-              // visual order and prevents the brief temp+real overlap.
-              if (incoming.sender_id === meId) {
-                const tempIdx = prev.findIndex(
-                  (m) =>
-                    m.id.startsWith("tmp_") &&
-                    m.sender_id === meId &&
-                    m.body === incoming.body,
-                );
-                if (tempIdx >= 0) {
-                  const next = prev.slice();
-                  next[tempIdx] = incoming;
-                  return next;
-                }
-              }
-
-              return [...prev, incoming];
-            });
+            setMessages((prev) =>
+              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
+            );
           },
         )
         .subscribe();
@@ -90,7 +86,7 @@ export function Thread({
   // Auto-scroll to the latest message on change.
   useEffect(() => {
     tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
+  }, [optimisticMessages.length]);
 
   async function submit(formData: FormData) {
     const body = String(formData.get("body") ?? "").trim();
@@ -100,7 +96,7 @@ export function Thread({
     formRef.current?.reset();
 
     const tempId = `tmp_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36)}`;
-    const tempMessage: LocalMessage = {
+    addOptimistic({
       id: tempId,
       conversation_id: conversationId,
       sender_id: meId,
@@ -108,35 +104,30 @@ export function Thread({
       sent_by_agent: false,
       created_at: new Date().toISOString(),
       pending: true,
-    };
-
-    setMessages((prev) => [...prev, tempMessage]);
-
-    startTransition(async () => {
-      const res = await sendMessage(conversationId, formData);
-      setMessages((prev) => {
-        const withoutTemp = prev.filter((m) => m.id !== tempId);
-        if (!res.ok) return withoutTemp;
-        // Realtime may have already delivered the same row (matched by id);
-        // either way, ensure the real message is in state exactly once.
-        return withoutTemp.some((m) => m.id === res.message.id)
-          ? withoutTemp
-          : [...withoutTemp, res.message];
-      });
-      if (!res.ok) setError(res.error ?? "Send failed");
     });
+
+    const res = await sendMessage(conversationId, formData);
+    if (!res.ok) {
+      setError(res.error ?? "Send failed");
+      return;
+    }
+    // Add the real message to confirmed state. Realtime may have already
+    // added it; dedupe by id.
+    setMessages((prev) =>
+      prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message],
+    );
   }
 
   return (
     <div className="flex flex-col">
       <div className="min-h-[40vh] py-4">
-        {messages.length === 0 ? (
+        {optimisticMessages.length === 0 ? (
           <p className="my-12 text-center text-sm text-ink-mute">
             No messages yet — type below to say hello.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {messages.map((m) => (
+            {optimisticMessages.map((m) => (
               <Bubble key={m.id} message={m} mine={m.sender_id === meId} />
             ))}
           </ul>
@@ -163,18 +154,25 @@ export function Thread({
             }}
             className="min-h-[44px] flex-1 resize-none rounded-xl border border-ink-line px-3 py-2 text-base focus:border-ink focus:outline-none"
           />
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-soft disabled:opacity-50"
-          >
-            {pending ? "Sending…" : "Send"}
-          </button>
+          <SendButton />
         </div>
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
         <p className="mt-1 text-[10px] text-ink-mute">Enter to send · Shift+Enter for newline</p>
       </form>
     </div>
+  );
+}
+
+function SendButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white hover:bg-ink-soft disabled:opacity-50"
+    >
+      {pending ? "Sending…" : "Send"}
+    </button>
   );
 }
 
