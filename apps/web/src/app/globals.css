@@ -16,3 +16,24 @@ html, body {
 a {
   color: inherit;
 }
+
+/* Subtle press feedback on every interactive button + form submit + role=button.
+   100ms ease feels native; scale-down communicates "you clicked me" without
+   the OS-style depth of a shadow inset. Skip when disabled. */
+button,
+a[role="button"],
+[type="button"],
+[type="submit"] {
+  transition:
+    transform 100ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+}
+
+button:not(:disabled):active,
+a[role="button"]:not([aria-disabled="true"]):active,
+[type="button"]:not(:disabled):active,
+[type="submit"]:not(:disabled):active {
+  transform: scale(0.97);
+}

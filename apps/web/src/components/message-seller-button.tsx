@@ -1,25 +1,55 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 export function MessageSellerButton({ listingId }: { listingId: string }) {
-  return (
-    <form action="/messages/start" method="post">
-      <input type="hidden" name="listingId" value={listingId} />
-      <SubmitButton />
-    </form>
-  );
-}
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+  function handleClick() {
+    setError(null);
+    startTransition(async () => {
+      const r = await fetch("/messages/start", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "x-requested-with": "fetch",
+        },
+        body: JSON.stringify({ listingId }),
+      });
+
+      if (r.status === 401) {
+        router.push(
+          `/sign-in?error=Sign+in+to+message&next=${encodeURIComponent(`/messages/start?listingId=${listingId}`)}`,
+        );
+        return;
+      }
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setError(j.error ?? "Could not start conversation");
+        return;
+      }
+      const { id } = (await r.json()) as { id: string };
+      // router.push for client navigation — no full page reload, the
+      // /messages/[id] loading skeleton appears instantly.
+      router.push(`/messages/${id}`);
+    });
+  }
+
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-full bg-ink py-3 text-sm font-medium text-white hover:bg-ink-soft disabled:opacity-70"
-    >
-      {pending ? "Starting conversation…" : "Message seller"}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        className="w-full rounded-full bg-ink py-3 text-sm font-medium text-white transition hover:bg-ink-soft disabled:opacity-70"
+      >
+        {pending ? "Starting conversation…" : "Message seller"}
+      </button>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
   );
 }
