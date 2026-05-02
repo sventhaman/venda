@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Vertical } from "@ichiba/schema";
+import {
+  LISTING_IMAGES_BUCKET,
+  diffRemovedPaths,
+  pathsFromImages,
+} from "@/lib/storage";
 
 const STR = (fd: FormData, k: string) => {
   const v = fd.get(k);
@@ -42,7 +47,16 @@ export async function updateListing(
   const priceAmount = NUM(formData, "priceAmount");
   const country = STR(formData, "country");
 
-  // Update the parent listings row first.
+  const newImages = (ARR(formData, "images") ?? []).map((url) => ({ url }));
+
+  // Fetch the current images so we can diff and clean up Storage afterwards.
+  const { data: existing } = await supabase
+    .from("listings")
+    .select("images")
+    .eq("id", listingId)
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
   const baseUpdate: Record<string, any> = {
     title: STR(formData, "title"),
     description: STR(formData, "description") ?? null,
@@ -52,7 +66,7 @@ export async function updateListing(
     region: STR(formData, "region") ?? null,
     city: STR(formData, "city") ?? null,
     postal_code: STR(formData, "postalCode") ?? null,
-    images: (ARR(formData, "images") ?? []).map((url) => ({ url })),
+    images: newImages,
   };
 
   const { error: baseErr } = await supabase
@@ -80,6 +94,15 @@ export async function updateListing(
     );
   }
 
+  // Drop Storage files for any image that was removed in this edit. Best-effort:
+  // if Storage delete fails (network blip, file already gone) we don't roll back
+  // the listing update — the file is now an orphan but the user's intent is
+  // honored. A periodic sweep can mop up if needed.
+  const removedPaths = diffRemovedPaths(existing?.images ?? [], newImages);
+  if (removedPaths.length > 0) {
+    await supabase.storage.from(LISTING_IMAGES_BUCKET).remove(removedPaths);
+  }
+
   revalidatePath(`/${vertical}`);
   revalidatePath(`/${vertical}/${listingId}`);
   revalidatePath("/account/listings");
@@ -95,6 +118,16 @@ export async function deleteListing(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
+  // Grab the image list before the row goes away. Cascade deletes the per-
+  // vertical detail row but won't touch Storage files (those live outside
+  // Postgres).
+  const { data: existing } = await supabase
+    .from("listings")
+    .select("images")
+    .eq("id", id)
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("listings")
     .delete()
@@ -103,6 +136,14 @@ export async function deleteListing(formData: FormData) {
 
   if (error) {
     redirect(`/account/listings?error=${encodeURIComponent(error.message)}`);
+  }
+
+  // Best-effort Storage cleanup. RLS on storage.objects only lets us delete
+  // files where the path's first segment is our auth.uid() — which they are,
+  // since the user uploaded them in the first place.
+  const paths = pathsFromImages(existing?.images);
+  if (paths.length > 0) {
+    await supabase.storage.from(LISTING_IMAGES_BUCKET).remove(paths);
   }
 
   if (vertical) revalidatePath(`/${vertical}`);
