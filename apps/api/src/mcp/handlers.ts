@@ -1,4 +1,4 @@
-import { ListingSearchQuery, NewListing, NewMessage } from "@ichiba/schema";
+import { ListingSearchQuery, NewListing } from "@ichiba/schema";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchListings, getListing } from "../lib/listings.js";
@@ -102,31 +102,42 @@ export async function callTool(
       const scopeCheck = requireScope(ctx, "messages:write");
       if (scopeCheck) return scopeCheck;
 
-      const parsed = NewMessage.safeParse(args);
+      const parsed = z
+        .object({
+          conversationId: z.string().uuid().optional(),
+          listingId: z.string().uuid().optional(),
+          body: z.string().trim().min(1).max(10000),
+          attachments: z.array(z.string().url()).optional(),
+        })
+        .refine((d) => d.conversationId || d.listingId, {
+          message: "Provide conversationId or listingId",
+        })
+        .safeParse(args);
       if (!parsed.success) return { ok: false, error: parsed.error.message };
 
       let conversationId = parsed.data.conversationId;
 
+      // listingId path: resume or create the unique buyer↔seller thread via
+      // the SECURITY DEFINER RPC (which pins the seller from the listing).
+      // We never accept an arbitrary recipientId — that would let a caller
+      // wire two unrelated users into a thread.
       if (!conversationId) {
-        if (!parsed.data.recipientId) {
-          return { ok: false, error: "recipientId required to start a new thread" };
+        const { data: convoId, error: rpcErr } = await ctx.supabase.rpc(
+          "start_conversation",
+          { _listing_id: parsed.data.listingId },
+        );
+        if (rpcErr || !convoId) {
+          return { ok: false, error: rpcErr?.message ?? "could not start conversation" };
         }
-        const { data: convo, error: convoErr } = await ctx.supabase
-          .from("conversations")
-          .insert({ listing_id: parsed.data.listingId ?? null })
-          .select()
-          .single();
-        if (convoErr || !convo) {
-          return { ok: false, error: convoErr?.message ?? "convo insert failed" };
-        }
-        const { error: partErr } = await ctx.supabase
+        conversationId = convoId as string;
+      } else {
+        const { data: membership } = await ctx.supabase
           .from("conversation_participants")
-          .insert([
-            { conversation_id: convo.id, user_id: ctx.userId },
-            { conversation_id: convo.id, user_id: parsed.data.recipientId },
-          ]);
-        if (partErr) return { ok: false, error: partErr.message };
-        conversationId = convo.id;
+          .select("conversation_id")
+          .eq("conversation_id", conversationId)
+          .eq("user_id", ctx.userId)
+          .maybeSingle();
+        if (!membership) return { ok: false, error: "not a participant" };
       }
 
       const { data: msg, error } = await ctx.supabase

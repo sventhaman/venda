@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { NewMessage } from "@ichiba/schema";
+import { z } from "zod";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, requireScope, type AuthVariables } from "../middleware/auth.js";
 
@@ -22,24 +22,48 @@ messagesRoutes.get("/conversations", requireScope("messages:read"), async (c) =>
   return c.json({ items: data ?? [] });
 });
 
-// Messages in a conversation.
+// Messages in a conversation. Verify the caller is a participant before
+// returning anything — agent auth uses the service-role client which bypasses
+// RLS, so the explicit check is what gates this for agents.
 messagesRoutes.get("/conversations/:id/messages", requireScope("messages:read"), async (c) => {
   const supa = c.get("supabase");
+  const userId = c.get("authedUserId");
+  const conversationId = c.req.param("id");
+
+  const { data: membership } = await supa
+    .from("conversation_participants")
+    .select("conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!membership) return c.json({ error: "not found" }, 404);
+
   const { data, error } = await supa
     .from("messages")
     .select("*")
-    .eq("conversation_id", c.req.param("id"))
+    .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   if (error) return c.json({ error: error.message }, 500);
   return c.json({ items: data ?? [] });
 });
 
 // Send a message. Either:
-//  - conversationId: post into existing thread, or
-//  - recipientId (+ optional listingId): start a new thread.
+//   - conversationId: post into an existing thread the caller already participates in.
+//   - listingId: resume or start the (unique) buyer↔seller thread for that listing
+//     via the start_conversation RPC. We never accept an arbitrary recipientId
+//     from the client — that would let a caller wire two unrelated users into a
+//     thread.
+const SendBody = z.object({
+  conversationId: z.string().uuid().optional(),
+  listingId: z.string().uuid().optional(),
+  body: z.string().trim().min(1).max(10000),
+  attachments: z.array(z.string().url()).optional(),
+}).refine((d) => d.conversationId || d.listingId, {
+  message: "Provide conversationId or listingId",
+});
+
 messagesRoutes.post("/", requireScope("messages:write"), async (c) => {
-  const body = await c.req.json();
-  const parsed = NewMessage.safeParse(body);
+  const parsed = SendBody.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const supa = c.get("supabase");
@@ -48,23 +72,25 @@ messagesRoutes.post("/", requireScope("messages:write"), async (c) => {
 
   let conversationId = parsed.data.conversationId;
 
+  // listingId path: look up or create the unique thread between caller and seller.
   if (!conversationId) {
-    if (!parsed.data.recipientId) return c.json({ error: "recipientId required" }, 400);
-
-    const { data: convo, error: convoErr } = await supa
-      .from("conversations")
-      .insert({ listing_id: parsed.data.listingId ?? null })
-      .select()
-      .single();
-    if (convoErr || !convo) return c.json({ error: convoErr?.message ?? "convo insert failed" }, 500);
-
-    const { error: partErr } = await supa.from("conversation_participants").insert([
-      { conversation_id: convo.id, user_id: userId },
-      { conversation_id: convo.id, user_id: parsed.data.recipientId },
-    ]);
-    if (partErr) return c.json({ error: partErr.message }, 500);
-
-    conversationId = convo.id;
+    const { data: convoId, error: rpcErr } = await supa.rpc("start_conversation", {
+      _listing_id: parsed.data.listingId,
+    });
+    if (rpcErr || !convoId) {
+      return c.json({ error: rpcErr?.message ?? "could not start conversation" }, 400);
+    }
+    conversationId = convoId as string;
+  } else {
+    // Verify the caller is a participant. RLS would catch this for human
+    // sessions, but agents go through the service-role client.
+    const { data: membership } = await supa
+      .from("conversation_participants")
+      .select("conversation_id")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!membership) return c.json({ error: "not a participant" }, 403);
   }
 
   const { data: msg, error } = await supa

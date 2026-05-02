@@ -107,8 +107,17 @@ listingsRoutes.patch("/:id", authMiddleware, requireScope("listings:write"), asy
 
   if (body.status === "active") updates.published_at = new Date().toISOString();
 
-  const { error } = await supa.from("listings").update(updates).eq("id", id);
+  // Defense in depth: filter by seller_id even when RLS would have caught it.
+  // Agent auth currently uses the service-role client, which bypasses RLS, so
+  // the explicit owner filter is what actually scopes the update for agents.
+  const userId = c.get("authedUserId");
+  const { error, count } = await supa
+    .from("listings")
+    .update(updates, { count: "exact" })
+    .eq("id", id)
+    .eq("seller_id", userId);
   if (error) return c.json({ error: error.message }, 400);
+  if ((count ?? 0) === 0) return c.json({ error: "not found or not yours" }, 404);
 
   const full = await getListing(supa, id);
   return c.json(full);
@@ -117,8 +126,14 @@ listingsRoutes.patch("/:id", authMiddleware, requireScope("listings:write"), asy
 // Authenticated: delete.
 listingsRoutes.delete("/:id", authMiddleware, requireScope("listings:write"), async (c) => {
   const supa = c.get("supabase");
-  const { error } = await supa.from("listings").delete().eq("id", c.req.param("id"));
+  const userId = c.get("authedUserId");
+  const { error, count } = await supa
+    .from("listings")
+    .delete({ count: "exact" })
+    .eq("id", c.req.param("id"))
+    .eq("seller_id", userId);
   if (error) return c.json({ error: error.message }, 400);
+  if ((count ?? 0) === 0) return c.json({ error: "not found or not yours" }, 404);
   return c.body(null, 204);
 });
 
