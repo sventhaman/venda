@@ -19,8 +19,13 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_conversation_participant(uuid) from public, anon, authenticated;
-grant execute on function public.is_conversation_participant(uuid) to postgres;
+-- Lock the function down so anon can't RPC it, but authenticated must keep
+-- EXECUTE — policies are evaluated as the calling role, so the helper has to
+-- be callable by authenticated for the policy itself to work. The function
+-- only checks membership against the caller's own auth.uid() and returns a
+-- boolean, so it's safe to call from RPC too.
+revoke execute on function public.is_conversation_participant(uuid) from public, anon;
+grant   execute on function public.is_conversation_participant(uuid) to authenticated;
 
 drop policy if exists "participants self read"          on public.conversation_participants;
 drop policy if exists "conversations participants read" on public.conversations;
