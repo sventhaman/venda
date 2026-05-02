@@ -5,6 +5,7 @@ import { searchListings } from "@/lib/api";
 import { ListingCard } from "@/components/listing-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { SearchBar } from "@/components/search-bar";
+import { SortControl } from "./sort-control";
 
 const VERTICAL_TITLES: Record<Vertical, string> = {
   goods: "Marketplace",
@@ -68,14 +69,14 @@ export default async function VerticalPage({
         <FilterSidebar vertical={vertical as Vertical} />
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between border-b border-ink-line pb-3">
+          <div className="flex items-baseline justify-between gap-3 border-b border-ink-line pb-3">
             <div className="text-sm text-ink-mute">
               <span className="font-medium text-ink tabular-nums">
                 {result.total.toLocaleString()}
               </span>{" "}
               results
             </div>
-            <SortControl current={sort} vertical={vertical} />
+            <SortControl current={sort} />
           </div>
 
           {result.items.length === 0 ? (
@@ -90,47 +91,54 @@ export default async function VerticalPage({
             </ul>
           )}
 
-          {totalPages > 1 && <Pagination page={page} totalPages={totalPages} vertical={vertical} />}
+          {totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              vertical={vertical}
+              params={sp}
+            />
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function SortControl({ current, vertical }: { current: string; vertical: string }) {
-  const opts: Array<[string, string]> = [
-    ["newest", "Newest"],
-    ["oldest", "Oldest"],
-    ["price_asc", "Price: low → high"],
-    ["price_desc", "Price: high → low"],
-  ];
-  return (
-    <form action={`/${vertical}`} className="text-sm">
-      <label className="mr-2 text-ink-mute">Sort</label>
-      <select
-        name="sort"
-        defaultValue={current}
-        className="rounded border border-ink-line bg-white px-2 py-1 text-sm focus:border-ink focus:outline-none"
-      >
-        {opts.map(([k, label]) => (
-          <option key={k} value={k}>{label}</option>
-        ))}
-      </select>
-    </form>
-  );
-}
+function Pagination({
+  page,
+  totalPages,
+  vertical,
+  params,
+}: {
+  page: number;
+  totalPages: number;
+  vertical: string;
+  params: Record<string, string | undefined>;
+}) {
+  // Preserve all current search params on each page link — switching pages
+  // shouldn't reset the active query, sort, or filters.
+  const buildHref = (p: number) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v && k !== "page") qs.set(k, v);
+    }
+    qs.set("page", String(p));
+    return `/${vertical}?${qs.toString()}`;
+  };
 
-function Pagination({ page, totalPages, vertical }: { page: number; totalPages: number; vertical: string }) {
   const pages: number[] = [];
   const start = Math.max(1, page - 2);
   const end = Math.min(totalPages, start + 4);
   for (let i = start; i <= end; i++) pages.push(i);
+
   return (
-    <nav className="mt-10 flex items-center justify-center gap-2 text-sm">
+    <nav className="mt-10 flex items-center justify-center gap-2 text-sm" aria-label="Pagination">
       {pages.map((p) => (
-        <a
+        <Link
           key={p}
-          href={`/${vertical}?page=${p}`}
+          href={buildHref(p)}
+          aria-current={p === page ? "page" : undefined}
           className={
             p === page
               ? "rounded-full bg-ink px-3 py-1.5 text-white"
@@ -138,7 +146,7 @@ function Pagination({ page, totalPages, vertical }: { page: number; totalPages: 
           }
         >
           {p}
-        </a>
+        </Link>
       ))}
     </nav>
   );
@@ -147,11 +155,16 @@ function Pagination({ page, totalPages, vertical }: { page: number; totalPages: 
 function EmptyState({ vertical }: { vertical: Vertical }) {
   return (
     <div className="mt-16 flex flex-col items-center text-center">
-      <div className="text-5xl">🪷</div>
+      <div className="rounded-full bg-ink-fog p-4 text-ink-mute">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </div>
       <h2 className="mt-4 text-xl font-semibold">No listings yet</h2>
       <p className="mt-2 max-w-md text-sm text-ink-mute">
-        ichiba is just getting started. Be the first to post in {VERTICAL_TITLES[vertical]} —
-        or have your agent post one for you.
+        Nothing in {VERTICAL_TITLES[vertical].toLowerCase()} matches yet. Be the first to
+        post — or have your agent post one for you.
       </p>
       <Link
         href="/new"

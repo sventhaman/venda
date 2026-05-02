@@ -35,8 +35,8 @@ export default async function NewListingPage() {
       </ul>
 
       <p className="mt-10 text-sm text-ink-mute">
-        The vertical-specific creation forms aren&apos;t built yet. Agents can already
-        post listings via <code className="rounded bg-ink-fog px-1.5 py-0.5">POST /v1/listings</code>.
+        Posting via an agent? Skip the form and call{" "}
+        <code className="rounded bg-ink-fog px-1.5 py-0.5">POST /v1/listings</code> directly.
       </p>
     </div>
   );

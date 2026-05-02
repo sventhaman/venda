@@ -118,9 +118,11 @@ export default async function ListingDetailPage({
               </>
             )}
 
-            <div className="mt-6 border-t border-ink-line pt-4 text-xs text-ink-mute">
-              ID: {listing.id}
-            </div>
+            {isSeller && (
+              <div className="mt-6 border-t border-ink-line pt-4 text-xs text-ink-mute">
+                ID: {listing.id}
+              </div>
+            )}
           </div>
         </aside>
       </div>

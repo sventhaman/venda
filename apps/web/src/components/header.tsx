@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { MobileMenu } from "./mobile-menu";
 
 const VERTICALS = [
   { slug: "goods", label: "Marketplace" },
@@ -28,7 +29,7 @@ export async function Header() {
 
   return (
     <header className="border-b border-ink-line bg-white">
-      <div className="mx-auto flex max-w-page items-center gap-8 px-6 py-4">
+      <div className="mx-auto flex max-w-page items-center gap-6 px-6 py-4">
         <Link href="/" className="text-xl font-semibold tracking-tight">
           ichiba
         </Link>
@@ -41,20 +42,14 @@ export async function Header() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 text-sm">
+        <div className="ml-auto hidden items-center gap-2 text-sm md:flex">
           {user ? (
             <>
-              <Link href="/account/listings" className="text-ink-mute hover:text-ink">
-                My listings
-              </Link>
-              <Link href="/account/saved" className="text-ink-mute hover:text-ink">
-                Saved
-              </Link>
-              <Link href="/developers/keys" className="text-ink-mute hover:text-ink">
-                API keys
-              </Link>
-              <Link href="/messages" className="text-ink-mute hover:text-ink">
-                Messages
+              <Link
+                href="/new"
+                className="rounded-full bg-ink px-4 py-1.5 text-white hover:bg-ink-soft"
+              >
+                New listing
               </Link>
               <Link
                 href="/account"
@@ -70,21 +65,6 @@ export async function Header() {
                 )}
                 <span className="hidden lg:inline">{displayName}</span>
               </Link>
-              <Link
-                href="/new"
-                className="rounded-full bg-ink px-4 py-1.5 text-white hover:bg-ink-soft"
-              >
-                New listing
-              </Link>
-              <form action="/sign-out" method="post">
-                <button
-                  type="submit"
-                  className="text-ink-mute hover:text-ink"
-                  aria-label="Sign out"
-                >
-                  Sign out
-                </button>
-              </form>
             </>
           ) : (
             <>
@@ -103,6 +83,13 @@ export async function Header() {
             </>
           )}
         </div>
+
+        <MobileMenu
+          signedIn={!!user}
+          displayName={displayName}
+          avatarUrl={avatarUrl}
+          initial={initial}
+        />
       </div>
     </header>
   );

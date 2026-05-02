@@ -3,6 +3,31 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Thread } from "./thread";
 import { formatPrice } from "@/lib/format";
+import type { Currency } from "@ichiba/schema";
+import type { SentMessage } from "./actions";
+
+type ParticipantProfile = {
+  id: string;
+  handle: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+type ParticipantRow = {
+  user_id: string;
+  // Supabase typegen would model joined relations as a possibly-null object;
+  // for our query (`!inner`) it's always present.
+  profiles: ParticipantProfile;
+};
+
+type ListingSnapshot = {
+  id: string;
+  title: string;
+  vertical: string;
+  price_amount: number | null;
+  price_currency: Currency | null;
+  images: Array<{ url: string }> | null;
+};
 
 export default async function ConversationPage({
   params,
@@ -15,7 +40,6 @@ export default async function ConversationPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+view+messages");
 
-  // RLS limits this to participants. If they aren't one, RLS hides the conversation.
   const { data: convo } = await supabase
     .from("conversations")
     .select("id, listing_id, created_at, last_message_at")
@@ -23,7 +47,7 @@ export default async function ConversationPage({
     .maybeSingle();
   if (!convo) notFound();
 
-  const [{ data: participants }, { data: messages }, { data: listing }] = await Promise.all([
+  const [participantsRes, messagesRes, listingRes] = await Promise.all([
     supabase
       .from("conversation_participants")
       .select("user_id, profiles!inner(id, handle, display_name, avatar_url)")
@@ -42,9 +66,13 @@ export default async function ConversationPage({
       : Promise.resolve({ data: null }),
   ]);
 
-  const other = (participants ?? []).find((p: any) => p.user_id !== user.id)?.profiles;
+  const participants = (participantsRes.data ?? []) as unknown as ParticipantRow[];
+  const messages = (messagesRes.data ?? []) as SentMessage[];
+  const listing = (listingRes.data ?? null) as ListingSnapshot | null;
 
-  // Mark as read on view.
+  const other = participants.find((p) => p.user_id !== user.id)?.profiles ?? null;
+  const otherName = other?.display_name ?? other?.handle ?? "Unknown";
+
   await supabase
     .from("conversation_participants")
     .update({ last_read_at: new Date().toISOString() })
@@ -56,64 +84,53 @@ export default async function ConversationPage({
       <div className="mb-4 flex items-center gap-2 text-sm text-ink-mute">
         <Link href="/messages" className="hover:text-ink">Messages</Link>
         <span aria-hidden>/</span>
-        <span className="truncate text-ink">
-          {other?.display_name ?? `@${other?.handle ?? "unknown"}`}
-        </span>
+        <span className="truncate text-ink">{otherName}</span>
       </div>
 
       <header className="flex items-center gap-4 border-b border-ink-line pb-4">
-        <Avatar
-          url={(other as any)?.avatar_url ?? null}
-          name={(other as any)?.display_name ?? (other as any)?.handle ?? "?"}
-        />
+        <Avatar url={other?.avatar_url ?? null} name={otherName} />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold">
-            {(other as any)?.display_name ?? `@${(other as any)?.handle ?? "unknown"}`}
-          </div>
-          {(other as any)?.handle && (
-            <div className="text-xs text-ink-mute">@{(other as any).handle}</div>
-          )}
+          <div className="font-semibold">{otherName}</div>
+          {other?.handle && <div className="text-xs text-ink-mute">@{other.handle}</div>}
         </div>
       </header>
 
-      {listing && (
-        <Link
-          href={`/${(listing as any).vertical}/${(listing as any).id}`}
-          className="mt-4 flex items-center gap-3 rounded-xl border border-ink-line p-3 hover:bg-ink-fog/50"
-        >
-          {(listing as any).images?.[0]?.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={(listing as any).images[0].url}
-              alt=""
-              className="h-12 w-16 rounded-md object-cover"
-            />
-          ) : (
-            <div className="h-12 w-16 rounded-md bg-ink-fog" />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="text-xs uppercase tracking-wide text-ink-mute">
-              About this listing
-            </div>
-            <div className="truncate text-sm font-medium">{(listing as any).title}</div>
-          </div>
-          {(listing as any).price_amount != null && (
-            <div className="shrink-0 text-sm font-semibold tabular-nums">
-              {formatPrice({
-                amount: Number((listing as any).price_amount),
-                currency: (listing as any).price_currency,
-              })}
-            </div>
-          )}
-        </Link>
-      )}
+      {listing && <ListingRefCard listing={listing} />}
 
-      <Thread
-        conversationId={id}
-        meId={user.id}
-        initial={(messages ?? []) as any}
-      />
+      <Thread conversationId={id} meId={user.id} initial={messages} />
     </div>
+  );
+}
+
+function ListingRefCard({ listing }: { listing: ListingSnapshot }) {
+  const heroImage = listing.images?.[0]?.url;
+  const price =
+    listing.price_amount != null && listing.price_currency
+      ? formatPrice({
+          amount: Number(listing.price_amount),
+          currency: listing.price_currency,
+        })
+      : null;
+
+  return (
+    <Link
+      href={`/${listing.vertical}/${listing.id}`}
+      className="mt-4 flex items-center gap-3 rounded-xl border border-ink-line p-3 hover:bg-ink-fog/50"
+    >
+      {heroImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={heroImage} alt="" className="h-12 w-16 rounded-md object-cover" />
+      ) : (
+        <div className="h-12 w-16 rounded-md bg-ink-fog" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-xs uppercase tracking-wide text-ink-mute">About this listing</div>
+        <div className="truncate text-sm font-medium">{listing.title}</div>
+      </div>
+      {price && (
+        <div className="shrink-0 text-sm font-semibold tabular-nums">{price}</div>
+      )}
+    </Link>
   );
 }
 
