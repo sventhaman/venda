@@ -24,8 +24,9 @@ app.get("/", (c) =>
         apiKeys: "/v1/api-keys (session only)",
       },
       mcp: {
-        tools: "/mcp/tools",
-        call: "/mcp/call",
+        endpoint: "/mcp",
+        transport: "streamable-http",
+        protocol: "2025-03-26",
       },
     },
   }),

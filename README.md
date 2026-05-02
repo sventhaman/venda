@@ -80,8 +80,68 @@ GET    /v1/api-keys                  session only
 POST   /v1/api-keys                  returns plaintext once
 DELETE /v1/api-keys/:id
 
-GET    /mcp/tools                    list MCP tool descriptors
-POST   /mcp/call                     { name, arguments }
+POST   /mcp                          MCP streamable-HTTP (JSON-RPC 2.0)
+```
+
+## MCP server
+
+ichiba speaks the [Model Context Protocol](https://modelcontextprotocol.io)
+over the streamable-HTTP transport at a single endpoint:
+
+```
+POST https://api.ichiba.com/mcp     (JSON-RPC 2.0)
+GET  https://api.ichiba.com/mcp     (405 — no server-initiated streams)
+```
+
+Auth is the same as REST: send `X-API-Key: ichiba_…` (agents) or
+`Authorization: Bearer <jwt>` (humans) on every JSON-RPC request.
+
+### Tools
+
+| Tool | Required scope | Purpose |
+|---|---|---|
+| `search_listings` | `listings:read` | Full-text + filter search across all 5 verticals |
+| `get_listing` | `listings:read` | Fetch one listing with vertical-specific details |
+| `create_listing` | `listings:write` | Post a new listing (any vertical) |
+| `send_message` | `messages:write` | Send/start a thread with a seller |
+| `list_my_conversations` | `messages:read` | Inbox |
+
+### Configuring an MCP client
+
+**Cursor / Claude Desktop** (or anything reading the standard MCP config):
+
+```jsonc
+{
+  "mcpServers": {
+    "ichiba": {
+      "url": "https://api.ichiba.com/mcp",
+      "headers": { "X-API-Key": "ichiba_..." }
+    }
+  }
+}
+```
+
+**stdio-only clients** (older Claude Desktop): bridge with [mcp-remote](https://www.npmjs.com/package/mcp-remote):
+
+```jsonc
+{
+  "mcpServers": {
+    "ichiba": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://api.ichiba.com/mcp",
+               "--header", "X-API-Key:ichiba_..."]
+    }
+  }
+}
+```
+
+**Curl smoke-test:**
+
+```bash
+KEY=ichiba_...
+curl -s -X POST http://localhost:8787/mcp \
+  -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 ## Schema
@@ -102,12 +162,11 @@ Zod definitions live in `packages/schema/src` and are imported by both the API a
 - Supabase migrations: profiles, api_keys, all 5 vertical listing tables, messaging, RLS
 - REST API for listings (CRUD), messages, profiles, api_keys
 - Auth middleware that handles both bearer JWTs and `X-API-Key`
-- MCP HTTP shim with tool descriptors and `search_listings` / `get_listing` implemented
+- MCP server speaking streamable-HTTP / JSON-RPC 2.0 with all five tools wired up
 - Web UI: homepage, per-vertical search/list page, listing detail page
 
 ## What's next
 
-- Wire up the official MCP SDK transport (streamable-HTTP) so create/update/message tools are available to MCP clients
 - Stripe Connect onboarding for sellers/landlords/employers
 - Image upload via Supabase Storage with signed URLs
 - Geo search (PostGIS `ST_DWithin`) on `listings.geo`
