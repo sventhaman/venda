@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getListing } from "@/lib/api";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
+import { MessageSellerButton } from "@/components/message-seller-button";
 
 export default async function ListingDetailPage({
   params,
@@ -59,15 +60,9 @@ export default async function ListingDetailPage({
         <aside className="lg:sticky lg:top-8 lg:self-start">
           <div className="rounded-2xl border border-ink-line p-6">
             <div className="text-3xl font-semibold tabular-nums">{formatPrice(listing.price)}</div>
-            <form action="/messages/start" method="post" className="mt-6">
-              <input type="hidden" name="listingId" value={listing.id} />
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-3 text-sm font-medium text-white hover:bg-ink-soft"
-              >
-                Message seller
-              </button>
-            </form>
+            <div className="mt-6">
+              <MessageSellerButton listingId={listing.id} />
+            </div>
             <button className="mt-2 w-full rounded-full border border-ink-line py-3 text-sm hover:border-ink">
               Save
             </button>

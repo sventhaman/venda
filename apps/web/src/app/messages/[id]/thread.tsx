@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { sendMessage } from "./actions";
+import { sendMessage, type SentMessage } from "./actions";
 
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  body: string;
-  sent_by_agent: boolean;
-  created_at: string;
-};
+type LocalMessage = SentMessage & { pending?: boolean };
 
 export function Thread({
   conversationId,
@@ -20,71 +13,124 @@ export function Thread({
 }: {
   conversationId: string;
   meId: string;
-  initial: Message[];
+  initial: SentMessage[];
 }) {
-  const [messages, setMessages] = useState(initial);
+  const [messages, setMessages] = useState<LocalMessage[]>(initial);
+
+  // Optimistic layer on top of confirmed messages. While the server action is
+  // pending, optimisticMessages contains an extra row with pending=true. When
+  // the action resolves, optimistic state collapses back to `messages`, which
+  // we update with the real row inside the action — so the bubble never
+  // disappears.
+  const [optimisticMessages, addOptimistic] = useOptimistic(
+    messages,
+    (current, msg: LocalMessage) => [...current, msg],
+  );
+
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const tailRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to new messages on this conversation. RLS ensures only participants
-  // receive these — Realtime respects the same policies as the REST API.
+  // Realtime: subscribe to inserts in this conversation. The browser WS needs
+  // the user's access token attached or RLS treats it as anon and filters
+  // everything out, so we setAuth before subscribing.
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const msg = payload.new as Message;
-          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-        },
-      )
-      .subscribe();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session?.access_token) {
+        await supabase.realtime.setAuth(session.access_token);
+      }
+
+      channel = supabase
+        .channel(`messages:${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const incoming = payload.new as SentMessage;
+            setMessages((prev) =>
+              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          },
+        )
+        .subscribe();
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [conversationId]);
 
-  // Scroll the page so the latest message is visible above the sticky composer.
+  // Auto-scroll to the latest message on change.
   useEffect(() => {
-    scrollerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
+    tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [optimisticMessages.length]);
+
+  async function submit(formData: FormData) {
+    const body = String(formData.get("body") ?? "").trim();
+    if (!body) return;
+
+    setError(null);
+    formRef.current?.reset();
+
+    const tempId = `tmp_${(globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36))}`;
+
+    startTransition(async () => {
+      addOptimistic({
+        id: tempId,
+        conversation_id: conversationId,
+        sender_id: meId,
+        body,
+        sent_by_agent: false,
+        created_at: new Date().toISOString(),
+        pending: true,
+      });
+
+      const res = await sendMessage(conversationId, formData);
+      if (!res.ok) {
+        setError(res.error ?? "Send failed");
+        return;
+      }
+      // Promote the optimistic bubble to the real message — Realtime may still
+      // deliver the same id later; setMessages dedupes.
+      setMessages((prev) =>
+        prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message],
+      );
+    });
+  }
 
   return (
     <div className="flex flex-col">
-      <div ref={scrollerRef} className="min-h-[40vh] py-4">
-        {messages.length === 0 ? (
+      <div className="min-h-[40vh] py-4">
+        {optimisticMessages.length === 0 ? (
           <p className="my-12 text-center text-sm text-ink-mute">
             No messages yet — type below to say hello.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {messages.map((m) => (
+            {optimisticMessages.map((m) => (
               <Bubble key={m.id} message={m} mine={m.sender_id === meId} />
             ))}
           </ul>
         )}
+        <div ref={tailRef} />
       </div>
 
       <form
         ref={formRef}
-        action={(formData) => {
-          setError(null);
-          startTransition(async () => {
-            const res = await sendMessage(conversationId, formData);
-            if (res.ok) formRef.current?.reset();
-            else setError(res.error ?? "Send failed");
-          });
-        }}
+        action={submit}
         className="sticky bottom-0 -mx-6 border-t border-ink-line bg-white/95 px-6 pb-4 pt-3 backdrop-blur"
       >
         <div className="flex items-end gap-2">
@@ -116,15 +162,15 @@ export function Thread({
   );
 }
 
-function Bubble({ message, mine }: { message: Message; mine: boolean }) {
+function Bubble({ message, mine }: { message: LocalMessage; mine: boolean }) {
   return (
     <li className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed transition-opacity ${
           mine
             ? "rounded-br-md bg-ink text-white"
             : "rounded-bl-md bg-ink-fog text-ink"
-        }`}
+        } ${message.pending ? "opacity-60" : ""}`}
       >
         {message.sent_by_agent && (
           <div className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">
