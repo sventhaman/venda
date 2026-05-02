@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getListing } from "@/lib/api";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { MessageSellerButton } from "@/components/message-seller-button";
+import { createClient } from "@/lib/supabase/server";
+import { deleteListing } from "@/app/account/listings/actions";
 
 export default async function ListingDetailPage({
   params,
@@ -12,6 +14,10 @@ export default async function ListingDetailPage({
   const { vertical, id } = await params;
   const listing = await getListing(id);
   if (!listing || listing.vertical !== vertical) notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isSeller = user?.id === listing.sellerId;
 
   const where = [listing.location?.city, listing.location?.region, listing.location?.country]
     .filter(Boolean)
@@ -60,12 +66,40 @@ export default async function ListingDetailPage({
         <aside className="lg:sticky lg:top-8 lg:self-start">
           <div className="rounded-2xl border border-ink-line p-6">
             <div className="text-3xl font-semibold tabular-nums">{formatPrice(listing.price)}</div>
-            <div className="mt-6">
-              <MessageSellerButton listingId={listing.id} />
-            </div>
-            <button className="mt-2 w-full rounded-full border border-ink-line py-3 text-sm hover:border-ink">
-              Save
-            </button>
+
+            {isSeller ? (
+              <>
+                <Link
+                  href={`/account/listings/${listing.id}/edit`}
+                  className="mt-6 block w-full rounded-full bg-ink py-3 text-center text-sm font-medium text-white hover:bg-ink-soft"
+                >
+                  Edit listing
+                </Link>
+                <form action={deleteListing} className="mt-2">
+                  <input type="hidden" name="id" value={listing.id} />
+                  <input type="hidden" name="vertical" value={listing.vertical} />
+                  <button
+                    type="submit"
+                    className="w-full rounded-full border border-ink-line py-3 text-sm text-ink-mute hover:border-red-500 hover:text-red-600"
+                  >
+                    Delete listing
+                  </button>
+                </form>
+                <div className="mt-3 text-center text-[10px] uppercase tracking-widest text-ink-mute">
+                  This is your listing
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mt-6">
+                  <MessageSellerButton listingId={listing.id} />
+                </div>
+                <button className="mt-2 w-full rounded-full border border-ink-line py-3 text-sm hover:border-ink">
+                  Save
+                </button>
+              </>
+            )}
+
             <div className="mt-6 border-t border-ink-line pt-4 text-xs text-ink-mute">
               ID: {listing.id}
             </div>

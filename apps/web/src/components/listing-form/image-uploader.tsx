@@ -9,8 +9,23 @@ const MAX_SIZE = 10 * 1024 * 1024;
 
 type UploadedImage = { url: string; path: string; name: string };
 
-export function ImageUploader({ name = "images" }: { name?: string }) {
-  const [images, setImages] = useState<UploadedImage[]>([]);
+export function ImageUploader({
+  name = "images",
+  initial,
+}: {
+  name?: string;
+  initial?: Array<{ url: string; alt?: string }>;
+}) {
+  // Pre-populate from existing listing images for edit mode. We don't have the
+  // storage path for these, so they can only be visually removed (the file
+  // stays in Storage; a follow-up can sweep orphans).
+  const [images, setImages] = useState<UploadedImage[]>(() =>
+    (initial ?? []).map((img, i) => ({
+      url: img.url,
+      path: `existing:${i}`,
+      name: img.alt ?? `image-${i + 1}`,
+    })),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +77,12 @@ export function ImageUploader({ name = "images" }: { name?: string }) {
 
   const remove = useCallback(
     async (path: string) => {
-      await supabase.storage.from(BUCKET).remove([path]);
+      // Pre-existing images carry an `existing:N` placeholder path; just drop
+      // them from the list. Newly uploaded images get deleted from Storage
+      // since we know their real path.
+      if (!path.startsWith("existing:")) {
+        await supabase.storage.from(BUCKET).remove([path]);
+      }
       setImages((prev) => prev.filter((i) => i.path !== path));
     },
     [supabase],

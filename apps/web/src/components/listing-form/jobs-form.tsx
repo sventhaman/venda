@@ -1,4 +1,13 @@
-import { CommonFields, Field, FormSection, NumberInput, Select, TextArea, TextInput } from "./shared";
+import {
+  CommonFields,
+  Field,
+  FormSection,
+  NumberInput,
+  Select,
+  TextArea,
+  TextInput,
+  type ListingFormDefaults,
+} from "./shared";
 
 const EMPLOYMENT: Array<[string, string]> = [
   ["full_time", "Full time"],
@@ -32,55 +41,56 @@ const PERIOD: Array<[string, string]> = [
   ["year", "per year"],
 ];
 
-export function JobsForm() {
+export function JobsForm({ defaults }: { defaults?: ListingFormDefaults }) {
+  const d = (defaults?.details ?? {}) as Record<string, any>;
   return (
     <>
-      <CommonFields priceLabel="Featured pay (optional)" />
+      <CommonFields priceLabel="Featured pay (optional)" defaults={defaults} />
       <FormSection title="Role" cols={2}>
         <Field label="Company name" required>
-          <TextInput name="companyName" required />
+          <TextInput name="companyName" required defaultValue={d.companyName} />
         </Field>
         <Field label="Function / Department">
-          <TextInput name="function" placeholder="e.g. Engineering" />
+          <TextInput name="function" placeholder="e.g. Engineering" defaultValue={d.function} />
         </Field>
         <Field label="Industry">
-          <TextInput name="industry" />
+          <TextInput name="industry" defaultValue={d.industry} />
         </Field>
         <Field label="Experience level">
-          <Select name="experienceLevel" defaultValue="" options={LEVEL} />
+          <Select name="experienceLevel" defaultValue={d.experienceLevel ?? ""} options={LEVEL} />
         </Field>
         <Field label="Employment type" required>
-          <Select name="employmentType" required defaultValue="full_time" options={EMPLOYMENT} />
+          <Select name="employmentType" required defaultValue={d.employmentType ?? "full_time"} options={EMPLOYMENT} />
         </Field>
         <Field label="Work arrangement" required>
-          <Select name="workArrangement" required defaultValue="onsite" options={ARRANGEMENT} />
+          <Select name="workArrangement" required defaultValue={d.workArrangement ?? "onsite"} options={ARRANGEMENT} />
         </Field>
       </FormSection>
 
       <FormSection title="Salary range" cols={2}>
         <Field label="Salary min">
-          <NumberInput name="salaryMin" min={0} step={1} />
+          <NumberInput name="salaryMin" min={0} step={1} defaultValue={d.salaryMin?.amount} />
         </Field>
         <Field label="Salary max">
-          <NumberInput name="salaryMax" min={0} step={1} />
+          <NumberInput name="salaryMax" min={0} step={1} defaultValue={d.salaryMax?.amount} />
         </Field>
         <Field label="Salary period">
-          <Select name="salaryPeriod" defaultValue="" options={PERIOD} />
+          <Select name="salaryPeriod" defaultValue={d.salaryPeriod ?? ""} options={PERIOD} />
         </Field>
         <Field label="Application deadline" hint="YYYY-MM-DD">
-          <TextInput name="applicationDeadline" type="date" />
+          <TextInput name="applicationDeadline" type="date" defaultValue={d.applicationDeadline} />
         </Field>
         <Field label="External application URL">
-          <TextInput name="applicationUrl" type="url" placeholder="https://..." />
+          <TextInput name="applicationUrl" type="url" placeholder="https://..." defaultValue={d.applicationUrl} />
         </Field>
       </FormSection>
 
       <FormSection title="Details">
         <Field label="Requirements" hint="One per line.">
-          <TextArea name="requirements" rows={4} />
+          <TextArea name="requirements" rows={4} defaultValue={Array.isArray(d.requirements) ? d.requirements.join("\n") : undefined} />
         </Field>
         <Field label="Benefits" hint="One per line.">
-          <TextArea name="benefits" rows={4} />
+          <TextArea name="benefits" rows={4} defaultValue={Array.isArray(d.benefits) ? d.benefits.join("\n") : undefined} />
         </Field>
       </FormSection>
     </>

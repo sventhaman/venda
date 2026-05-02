@@ -1,4 +1,12 @@
-import { CommonFields, Field, FormSection, Select, TextInput, Checkbox } from "./shared";
+import {
+  Checkbox,
+  CommonFields,
+  Field,
+  FormSection,
+  Select,
+  TextInput,
+  type ListingFormDefaults,
+} from "./shared";
 
 const CATEGORIES: Array<[string, string]> = [
   ["clothing", "Clothing"],
@@ -23,30 +31,41 @@ const CONDITIONS: Array<[string, string]> = [
   ["for_parts", "For parts"],
 ];
 
-export function GoodsForm() {
+export function GoodsForm({ defaults }: { defaults?: ListingFormDefaults }) {
+  const d = (defaults?.details ?? {}) as Record<string, any>;
   return (
     <>
-      <CommonFields />
+      <CommonFields defaults={defaults} />
       <FormSection title="Item details" cols={2}>
         <Field label="Category" required>
-          <Select name="category" required defaultValue="other" options={CATEGORIES} />
+          <Select
+            name="category"
+            required
+            defaultValue={d.category ?? "other"}
+            options={CATEGORIES}
+          />
         </Field>
         <Field label="Condition" required>
-          <Select name="condition" required defaultValue="good" options={CONDITIONS} />
+          <Select
+            name="condition"
+            required
+            defaultValue={d.condition ?? "good"}
+            options={CONDITIONS}
+          />
         </Field>
         <Field label="Brand">
-          <TextInput name="brand" />
+          <TextInput name="brand" defaultValue={d.brand} />
         </Field>
         <Field label="Size">
-          <TextInput name="size" />
+          <TextInput name="size" defaultValue={d.size} />
         </Field>
         <Field label="Color">
-          <TextInput name="color" />
+          <TextInput name="color" defaultValue={d.color} />
         </Field>
       </FormSection>
       <FormSection title="Delivery">
-        <Checkbox name="shippingAvailable" label="I can ship this item" />
-        <Checkbox name="pickupOnly" label="Pickup only" />
+        <Checkbox name="shippingAvailable" label="I can ship this item" defaultChecked={!!d.shippingAvailable} />
+        <Checkbox name="pickupOnly" label="Pickup only" defaultChecked={!!d.pickupOnly} />
       </FormSection>
     </>
   );

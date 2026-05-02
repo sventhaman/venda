@@ -65,11 +65,20 @@ export function Select({
   );
 }
 
-export function Checkbox({ name, label }: { name: string; label: string }) {
+export function Checkbox({
+  name,
+  label,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  defaultChecked?: boolean;
+}) {
   return (
     <label className="flex cursor-pointer items-center gap-2 text-sm">
       <input
         type="checkbox"
+        defaultChecked={defaultChecked}
         name={name}
         className="h-4 w-4 rounded border-ink-line"
       />

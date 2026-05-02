@@ -1,4 +1,12 @@
-import { CommonFields, Field, FormSection, NumberInput, Select, TextInput } from "./shared";
+import {
+  CommonFields,
+  Field,
+  FormSection,
+  NumberInput,
+  Select,
+  TextInput,
+  type ListingFormDefaults,
+} from "./shared";
 
 const FUEL: Array<[string, string]> = [
   ["petrol", "Petrol"],
@@ -37,40 +45,41 @@ const DRIVE: Array<[string, string]> = [
   ["4wd", "Four-wheel drive"],
 ];
 
-export function CarsForm() {
+export function CarsForm({ defaults }: { defaults?: ListingFormDefaults }) {
+  const d = (defaults?.details ?? {}) as Record<string, any>;
   return (
     <>
-      <CommonFields priceLabel="Asking price" />
+      <CommonFields priceLabel="Asking price" defaults={defaults} />
       <FormSection title="Vehicle" cols={2}>
         <Field label="Make" required>
-          <TextInput name="make" required />
+          <TextInput name="make" required defaultValue={d.make} />
         </Field>
         <Field label="Model" required>
-          <TextInput name="model" required />
+          <TextInput name="model" required defaultValue={d.model} />
         </Field>
         <Field label="Year" required>
-          <NumberInput name="year" required min={1900} max={2100} />
+          <NumberInput name="year" required min={1900} max={2100} defaultValue={d.year} />
         </Field>
         <Field label="Mileage (km)">
-          <NumberInput name="mileageKm" min={0} step={1} />
+          <NumberInput name="mileageKm" min={0} step={1} defaultValue={d.mileageKm} />
         </Field>
         <Field label="Fuel type" required>
-          <Select name="fuelType" required defaultValue="petrol" options={FUEL} />
+          <Select name="fuelType" required defaultValue={d.fuelType ?? "petrol"} options={FUEL} />
         </Field>
         <Field label="Transmission" required>
-          <Select name="transmission" required defaultValue="manual" options={TRANSMISSION} />
+          <Select name="transmission" required defaultValue={d.transmission ?? "manual"} options={TRANSMISSION} />
         </Field>
         <Field label="Body type" required>
-          <Select name="bodyType" required defaultValue="sedan" options={BODY} />
+          <Select name="bodyType" required defaultValue={d.bodyType ?? "sedan"} options={BODY} />
         </Field>
         <Field label="Drivetrain">
-          <Select name="drivetrain" defaultValue="" options={DRIVE} />
+          <Select name="drivetrain" defaultValue={d.drivetrain ?? ""} options={DRIVE} />
         </Field>
         <Field label="Engine power (HP)">
-          <NumberInput name="enginePowerHp" min={0} step={1} />
+          <NumberInput name="enginePowerHp" min={0} step={1} defaultValue={d.enginePowerHp} />
         </Field>
         <Field label="Exterior color">
-          <TextInput name="exteriorColor" />
+          <TextInput name="exteriorColor" defaultValue={d.exteriorColor} />
         </Field>
       </FormSection>
     </>

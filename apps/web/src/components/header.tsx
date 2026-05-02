@@ -41,6 +41,9 @@ export async function Header() {
         <div className="ml-auto flex items-center gap-3 text-sm">
           {user ? (
             <>
+              <Link href="/account/listings" className="text-ink-mute hover:text-ink">
+                My listings
+              </Link>
               <Link href="/developers/keys" className="text-ink-mute hover:text-ink">
                 API keys
               </Link>

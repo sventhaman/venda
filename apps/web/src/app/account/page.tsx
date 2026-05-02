@@ -50,7 +50,7 @@ export default async function AccountPage() {
           subtitle="Conversations about your listings"
         />
         <AccountCard
-          href={`/profile/${profile?.handle ?? ""}`}
+          href="/account/listings"
           title="My listings"
           subtitle={
             listingCount != null
