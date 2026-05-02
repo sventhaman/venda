@@ -12,9 +12,8 @@ values (
 )
 on conflict (id) do nothing;
 
-create policy "listing-images public read"
-  on storage.objects for select
-  using (bucket_id = 'listing-images');
+-- Public URLs serve directly without RLS; we deliberately omit a broad SELECT
+-- policy so clients can't enumerate the bucket via the list API.
 
 create policy "listing-images owner insert"
   on storage.objects for insert
