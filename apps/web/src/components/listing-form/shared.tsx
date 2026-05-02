@@ -1,4 +1,5 @@
 import { Checkbox, Field, FormSection, NumberInput, Select, TextArea, TextInput } from "./fields";
+import { ImageUploader } from "./image-uploader";
 
 const CURRENCIES: Array<[string, string]> = [
   ["NOK", "NOK"],
@@ -46,9 +47,7 @@ export function CommonFields({ priceLabel = "Price" }: { priceLabel?: string }) 
       </FormSection>
 
       <FormSection title="Photos">
-        <Field label="Image URLs" hint="One per line. Real upload UI coming soon.">
-          <TextArea name="images" rows={4} placeholder="https://..." />
-        </Field>
+        <ImageUploader name="images" />
       </FormSection>
     </>
   );
