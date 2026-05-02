@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, type SentMessage } from "./actions";
 
@@ -15,17 +15,11 @@ export function Thread({
   meId: string;
   initial: SentMessage[];
 }) {
+  // Single source of truth. We append a temp message on submit (with a
+  // tempId), and on the action's response we drop the temp and add the real
+  // row — unless Realtime already added it, in which case we just drop
+  // the temp. Same dedupe handles every ordering of (action ↔ realtime).
   const [messages, setMessages] = useState<LocalMessage[]>(initial);
-
-  // Optimistic layer on top of confirmed messages. While the server action is
-  // pending, optimisticMessages contains an extra row with pending=true. When
-  // the action resolves, optimistic state collapses back to `messages`, which
-  // we update with the real row inside the action — so the bubble never
-  // disappears.
-  const [optimisticMessages, addOptimistic] = useOptimistic(
-    messages,
-    (current, msg: LocalMessage) => [...current, msg],
-  );
 
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +70,7 @@ export function Thread({
   // Auto-scroll to the latest message on change.
   useEffect(() => {
     tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [optimisticMessages.length]);
+  }, [messages.length]);
 
   async function submit(formData: FormData) {
     const body = String(formData.get("body") ?? "").trim();
@@ -85,42 +79,44 @@ export function Thread({
     setError(null);
     formRef.current?.reset();
 
-    const tempId = `tmp_${(globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36))}`;
+    const tempId = `tmp_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36)}`;
+    const tempMessage: LocalMessage = {
+      id: tempId,
+      conversation_id: conversationId,
+      sender_id: meId,
+      body,
+      sent_by_agent: false,
+      created_at: new Date().toISOString(),
+      pending: true,
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
 
     startTransition(async () => {
-      addOptimistic({
-        id: tempId,
-        conversation_id: conversationId,
-        sender_id: meId,
-        body,
-        sent_by_agent: false,
-        created_at: new Date().toISOString(),
-        pending: true,
-      });
-
       const res = await sendMessage(conversationId, formData);
-      if (!res.ok) {
-        setError(res.error ?? "Send failed");
-        return;
-      }
-      // Promote the optimistic bubble to the real message — Realtime may still
-      // deliver the same id later; setMessages dedupes.
-      setMessages((prev) =>
-        prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message],
-      );
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((m) => m.id !== tempId);
+        if (!res.ok) return withoutTemp;
+        // Realtime may have already delivered the same row (matched by id);
+        // either way, ensure the real message is in state exactly once.
+        return withoutTemp.some((m) => m.id === res.message.id)
+          ? withoutTemp
+          : [...withoutTemp, res.message];
+      });
+      if (!res.ok) setError(res.error ?? "Send failed");
     });
   }
 
   return (
     <div className="flex flex-col">
       <div className="min-h-[40vh] py-4">
-        {optimisticMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <p className="my-12 text-center text-sm text-ink-mute">
             No messages yet — type below to say hello.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {optimisticMessages.map((m) => (
+            {messages.map((m) => (
               <Bubble key={m.id} message={m} mine={m.sender_id === meId} />
             ))}
           </ul>
