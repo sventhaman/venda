@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { RouteProgress } from "@/components/route-progress";
 
 export const metadata: Metadata = {
   title: "ichiba — agent-first marketplace",
@@ -26,11 +24,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className="min-h-screen flex flex-col">
-        {/* Suspense boundary so useSearchParams in RouteProgress doesn't
-            opt the whole tree out of static rendering. */}
-        <Suspense fallback={null}>
-          <RouteProgress />
-        </Suspense>
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
