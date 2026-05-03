@@ -33,9 +33,16 @@ const FULL_SELECT = `
 
 // Vertical-specific filter map. Each entry names a column on the matching
 // detail table; PostgREST embedded filtering applies them transparently.
+// Array values use `.in()` for multi-select (e.g. category=furniture,electronics).
 type DetailFilters = {
-  goods?: { category?: string; condition?: string };
-  cars?: { fuelType?: string; transmission?: string; bodyType?: string };
+  goods?: { category?: string | string[]; condition?: string };
+  cars?: {
+    make?: string;
+    model?: string;
+    fuelType?: string;
+    transmission?: string;
+    bodyType?: string;
+  };
   realestate?: { dealType?: string; propertyType?: string };
   jobs?: { employmentType?: string; workArrangement?: string };
   services?: { category?: string; pricingModel?: string };
@@ -83,30 +90,38 @@ export async function searchListings(
   }
 
   // Per-vertical detail filters. PostgREST applies these against the embedded
-  // relation when the relation name is used in the column path. We only apply
-  // them when a vertical is set — other listings would have NULL for that
-  // detail row and `eq` would never match (that's the desired behavior).
+  // relation when the relation name is used in the column path. Arrays use
+  // .in() for multi-select; single strings use .eq(). ilike() for free-form
+  // text fields like Make/Model so users can type partial values.
   const d = q.details;
   if (q.vertical && d) {
-    const apply = (rel: string, col: string, val: string | undefined) => {
-      if (val) query = query.eq(`${rel}.${col}`, val);
+    const eqOrIn = (rel: string, col: string, val: string | string[] | undefined) => {
+      if (!val || (Array.isArray(val) && val.length === 0)) return;
+      if (Array.isArray(val)) query = query.in(`${rel}.${col}`, val);
+      else query = query.eq(`${rel}.${col}`, val);
     };
+    const ilikeIf = (rel: string, col: string, val: string | undefined) => {
+      if (val) query = query.ilike(`${rel}.${col}`, `%${val}%`);
+    };
+
     if (q.vertical === "goods" && d.goods) {
-      apply("listing_goods", "category", d.goods.category);
-      apply("listing_goods", "condition", d.goods.condition);
+      eqOrIn("listing_goods", "category", d.goods.category);
+      eqOrIn("listing_goods", "condition", d.goods.condition);
     } else if (q.vertical === "cars" && d.cars) {
-      apply("listing_cars", "fuel_type", d.cars.fuelType);
-      apply("listing_cars", "transmission", d.cars.transmission);
-      apply("listing_cars", "body_type", d.cars.bodyType);
+      ilikeIf("listing_cars", "make", d.cars.make);
+      ilikeIf("listing_cars", "model", d.cars.model);
+      eqOrIn("listing_cars", "fuel_type", d.cars.fuelType);
+      eqOrIn("listing_cars", "transmission", d.cars.transmission);
+      eqOrIn("listing_cars", "body_type", d.cars.bodyType);
     } else if (q.vertical === "realestate" && d.realestate) {
-      apply("listing_realestate", "deal_type", d.realestate.dealType);
-      apply("listing_realestate", "property_type", d.realestate.propertyType);
+      eqOrIn("listing_realestate", "deal_type", d.realestate.dealType);
+      eqOrIn("listing_realestate", "property_type", d.realestate.propertyType);
     } else if (q.vertical === "jobs" && d.jobs) {
-      apply("listing_jobs", "employment_type", d.jobs.employmentType);
-      apply("listing_jobs", "work_arrangement", d.jobs.workArrangement);
+      eqOrIn("listing_jobs", "employment_type", d.jobs.employmentType);
+      eqOrIn("listing_jobs", "work_arrangement", d.jobs.workArrangement);
     } else if (q.vertical === "services" && d.services) {
-      apply("listing_services", "category", d.services.category);
-      apply("listing_services", "pricing_model", d.services.pricingModel);
+      eqOrIn("listing_services", "category", d.services.category);
+      eqOrIn("listing_services", "pricing_model", d.services.pricingModel);
     }
   }
 

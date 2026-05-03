@@ -32,15 +32,22 @@ export default async function VerticalPage({
   const sort = sp.sort ?? "newest";
 
   const supabase = await createClient();
-  // Per-vertical detail filters from the URL. Only the keys that match the
-  // current vertical are read; everything else stays in the URL but is ignored
-  // by the search.
+  // Per-vertical detail filters from the URL. Comma-separated values are
+  // turned into arrays for multi-select (.in()); single values stay strings
+  // (.eq()).
   const v = vertical as Vertical;
+  const csv = (val: string | undefined): string[] | string | undefined => {
+    if (!val) return undefined;
+    return val.includes(",") ? val.split(",").filter(Boolean) : val;
+  };
   const details = {
-    goods: v === "goods" ? { category: sp.category, condition: sp.condition } : undefined,
+    goods:
+      v === "goods" ? { category: csv(sp.category), condition: sp.condition } : undefined,
     cars:
       v === "cars"
         ? {
+            make: sp.make,
+            model: sp.model,
             fuelType: sp.fuelType,
             transmission: sp.transmission,
             bodyType: sp.bodyType,

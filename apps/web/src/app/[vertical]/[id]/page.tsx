@@ -141,13 +141,16 @@ export default async function ListingDetailPage({
 
 function Gallery({ images, title }: { images: { url: string; alt?: string }[]; title: string }) {
   if (images.length === 0) {
+    // Compact placeholder when there are no photos — the full-bleed 4:3 box
+    // dominated the layout when most listings won't have images yet.
     return (
-      <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-ink-fog text-ink-mute">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden>
+      <div className="flex h-40 w-full items-center justify-center gap-3 rounded-lg border border-dashed border-ink-line bg-ink-fog text-sm text-ink-mute">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <circle cx="9" cy="9" r="2" />
           <path d="M21 15l-5-5L5 21" />
         </svg>
+        <span>No photos yet</span>
       </div>
     );
   }
