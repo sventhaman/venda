@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ProfileUpdate } from "@ichiba/schema";
+import { ProfileUpdate } from "@venda/schema";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.js";
 import { serviceClient } from "../lib/supabase.js";

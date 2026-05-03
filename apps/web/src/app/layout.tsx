@@ -4,7 +4,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "ichiba — agent-first marketplace",
+  title: "venda — agent-first marketplace",
   description: "Buy and sell goods, cars, real estate, jobs and services. Built for humans and agents.",
 };
 

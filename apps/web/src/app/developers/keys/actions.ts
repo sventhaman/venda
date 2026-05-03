@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createHash, randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
-import { ApiKeyScope } from "@ichiba/schema";
+import { ApiKeyScope } from "@venda/schema";
 import { z } from "zod";
 
-const KEY_PREFIX = "ichiba_";
+const KEY_PREFIX = "venda_";
 const ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function randomToken(len: number) {

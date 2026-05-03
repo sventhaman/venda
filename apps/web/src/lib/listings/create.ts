@@ -1,7 +1,7 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { NewListing, type Vertical } from "@ichiba/schema";
+import { NewListing, type Vertical } from "@venda/schema";
 
 const VERTICAL_DETAIL_TABLE: Record<Vertical, string> = {
   goods: "listing_goods",

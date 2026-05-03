@@ -47,7 +47,7 @@ export default function HomePage() {
           </div>
           <pre className="overflow-x-auto rounded-2xl bg-ink p-6 text-xs leading-relaxed text-white/90">
 {`# search across all verticals
-curl https://api.ichiba.com/v1/listings?q=tesla+model+3&vertical=cars
+curl https://api.venda.sh/v1/listings?q=tesla+model+3&vertical=cars
 
 # call via MCP
 { "name": "search_listings",

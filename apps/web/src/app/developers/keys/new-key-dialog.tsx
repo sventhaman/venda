@@ -69,7 +69,7 @@ export function NewKeyDialog() {
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Create API key</h2>
               <p className="mt-1 text-sm text-ink-mute">
-                Used by an agent to authenticate with the ichiba API and MCP server.
+                Used by an agent to authenticate with the venda API and MCP server.
               </p>
             </div>
 

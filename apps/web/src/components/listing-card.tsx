@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Listing } from "@ichiba/schema";
+import type { Listing } from "@venda/schema";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { CardFavoriteHeart } from "./card-favorite-heart";
 

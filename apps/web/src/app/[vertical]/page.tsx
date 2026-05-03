@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { VERTICALS, type Vertical } from "@ichiba/schema";
+import { VERTICALS, type Vertical } from "@venda/schema";
 import { searchListings } from "@/lib/listings-server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
@@ -105,7 +105,7 @@ export default async function VerticalPage({
   return (
     <div className="mx-auto max-w-page px-6 py-8">
       <div className="mb-6 flex items-center gap-2 text-sm text-ink-mute">
-        <Link href="/" className="hover:text-ink">ichiba</Link>
+        <Link href="/" className="hover:text-ink">venda</Link>
         <span aria-hidden>/</span>
         <span className="text-ink">{meta.title}</span>
       </div>

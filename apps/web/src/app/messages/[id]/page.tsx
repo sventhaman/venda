@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { Thread } from "./thread";
 import { formatPrice } from "@/lib/format";
-import type { Currency } from "@ichiba/schema";
+import type { Currency } from "@venda/schema";
 import type { SentMessage } from "./actions";
 
 type ParticipantProfile = {

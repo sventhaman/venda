@@ -1,4 +1,4 @@
-import type { Vertical } from "@ichiba/schema";
+import type { Vertical } from "@venda/schema";
 
 // Per-vertical landing copy + filter-pill labels. Centralized here so the
 // page, the FilterPills, and any future MobileFilterDrawer all read the
@@ -15,7 +15,7 @@ export const VERTICAL_META: Record<
   },
   cars: {
     title: "Cars",
-    tagline: "Buy and sell cars on ichiba",
+    tagline: "Buy and sell cars on venda",
     blurb: "Hatchbacks to hypercars. Every fuel type, every budget.",
   },
   realestate: {

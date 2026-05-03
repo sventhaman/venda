@@ -1,4 +1,4 @@
-import type { Money } from "@ichiba/schema";
+import type { Money } from "@venda/schema";
 
 export function formatPrice(money: Money | undefined): string {
   if (!money) return "—";

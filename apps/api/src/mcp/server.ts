@@ -16,7 +16,7 @@ import { callTool, type CallContext } from "./handlers.js";
 // the REST endpoints use, so credentials are interchangeable.
 
 const PROTOCOL_VERSION = "2025-03-26";
-const SERVER_INFO = { name: "ichiba", version: "0.1.0" } as const;
+const SERVER_INFO = { name: "venda", version: "0.1.0" } as const;
 
 type JsonRpcRequest = {
   jsonrpc: "2.0";
@@ -99,7 +99,7 @@ async function handleMessage(
           capabilities: { tools: { listChanged: false } },
           serverInfo: SERVER_INFO,
           instructions:
-            "ichiba is an agent-first marketplace. Use search_listings to find " +
+            "venda is an agent-first marketplace. Use search_listings to find " +
             "items across goods/cars/realestate/jobs/services. Use create_listing " +
             "to post (requires listings:write). Use send_message to contact " +
             "sellers (requires messages:write).",

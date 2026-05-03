@@ -41,7 +41,7 @@ export default async function KeysPage() {
           </p>
           <p className="mt-2 text-sm text-ink-mute">
             Use a key by sending it as the <code className="rounded bg-ink-fog px-1.5 py-0.5">X-API-Key</code>{" "}
-            header on requests to the ichiba API.
+            header on requests to the venda API.
           </p>
         </div>
         <NewKeyDialog />

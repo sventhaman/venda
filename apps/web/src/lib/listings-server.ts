@@ -9,7 +9,7 @@
 // out N+1 by vertical). One query, all the data.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Listing, ListingSearchQuery } from "@ichiba/schema";
+import type { Listing, ListingSearchQuery } from "@venda/schema";
 
 const VERTICAL_DETAIL_TABLE: Record<string, string> = {
   goods: "listing_goods",

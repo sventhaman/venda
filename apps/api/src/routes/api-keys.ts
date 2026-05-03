@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { NewApiKey } from "@ichiba/schema";
+import { NewApiKey } from "@venda/schema";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.js";
 
@@ -28,7 +28,7 @@ apiKeysRoutes.post("/", async (c) => {
   const parsed = NewApiKey.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
-  const plaintext = `ichiba_${randomToken(40)}`;
+  const plaintext = `venda_${randomToken(40)}`;
   const prefix = plaintext.slice(0, 14);
   const keyHash = await sha256Hex(plaintext);
 

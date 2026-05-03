@@ -1,4 +1,4 @@
-project_id = "ichiba"
+project_id = "venda"
 
 [api]
 enabled = true

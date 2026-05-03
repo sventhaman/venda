@@ -28,10 +28,10 @@ export async function Header() {
       <div className="mx-auto flex max-w-page items-center justify-between gap-4 px-6 py-3">
         <Link
           href="/"
-          aria-label="ichiba — home"
+          aria-label="venda — home"
           className="text-xl font-semibold tracking-tight"
         >
-          ichiba
+          venda
         </Link>
 
         <div className="hidden items-center gap-1 text-sm md:flex">

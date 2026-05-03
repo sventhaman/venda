@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { FilterSidebar } from "@/components/filter-sidebar";
-import type { Vertical } from "@ichiba/schema";
+import type { Vertical } from "@venda/schema";
 
 // Mobile-only "Filters" trigger + slide-up sheet. Shows the same FilterSidebar
 // the desktop layout uses, with a count badge for active filters. Closes on

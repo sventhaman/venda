@@ -13,7 +13,7 @@ app.use("*", cors({ origin: "*", allowMethods: ["GET", "POST", "PATCH", "DELETE"
 
 app.get("/", (c) =>
   c.json({
-    name: "ichiba-api",
+    name: "venda-api",
     description:
       "Agent-first marketplace API. Auth: X-API-Key (agents) or Authorization: Bearer (humans).",
     endpoints: {

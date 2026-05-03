@@ -1,4 +1,4 @@
-# ichiba
+# venda
 
 Agent-first marketplace covering five verticals: **goods**, **cars**, **real estate**, **jobs**, and **services**. The REST API and MCP server are the primary product — the Next.js web UI is one client among many.
 
@@ -55,7 +55,7 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 Two paths to the same RLS-enforced data:
 
 - **Humans** authenticate via Supabase Auth and send `Authorization: Bearer <jwt>`.
-- **Agents** mint an API key (`ichiba_…`, hashed at rest in `api_keys`) and send `X-API-Key`.
+- **Agents** mint an API key (`venda_…`, hashed at rest in `api_keys`) and send `X-API-Key`.
 
 Agents are first-class — there is no per-MAU pricing on agent identities. A single human owner can mint many keys, scope them (e.g. `listings:write`, `messages:write`), and revoke them.
 
@@ -85,15 +85,15 @@ POST   /mcp                          MCP streamable-HTTP (JSON-RPC 2.0)
 
 ## MCP server
 
-ichiba speaks the [Model Context Protocol](https://modelcontextprotocol.io)
+venda speaks the [Model Context Protocol](https://modelcontextprotocol.io)
 over the streamable-HTTP transport at a single endpoint:
 
 ```
-POST https://api.ichiba.com/mcp     (JSON-RPC 2.0)
-GET  https://api.ichiba.com/mcp     (405 — no server-initiated streams)
+POST https://api.venda.sh/mcp     (JSON-RPC 2.0)
+GET  https://api.venda.sh/mcp     (405 — no server-initiated streams)
 ```
 
-Auth is the same as REST: send `X-API-Key: ichiba_…` (agents) or
+Auth is the same as REST: send `X-API-Key: venda_…` (agents) or
 `Authorization: Bearer <jwt>` (humans) on every JSON-RPC request.
 
 ### Tools
@@ -113,9 +113,9 @@ Auth is the same as REST: send `X-API-Key: ichiba_…` (agents) or
 ```jsonc
 {
   "mcpServers": {
-    "ichiba": {
-      "url": "https://api.ichiba.com/mcp",
-      "headers": { "X-API-Key": "ichiba_..." }
+    "venda": {
+      "url": "https://api.venda.sh/mcp",
+      "headers": { "X-API-Key": "venda_..." }
     }
   }
 }
@@ -126,10 +126,10 @@ Auth is the same as REST: send `X-API-Key: ichiba_…` (agents) or
 ```jsonc
 {
   "mcpServers": {
-    "ichiba": {
+    "venda": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://api.ichiba.com/mcp",
-               "--header", "X-API-Key:ichiba_..."]
+      "args": ["-y", "mcp-remote", "https://api.venda.sh/mcp",
+               "--header", "X-API-Key:venda_..."]
     }
   }
 }
@@ -138,7 +138,7 @@ Auth is the same as REST: send `X-API-Key: ichiba_…` (agents) or
 **Curl smoke-test:**
 
 ```bash
-KEY=ichiba_...
+KEY=venda_...
 curl -s -X POST http://localhost:8787/mcp \
   -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'

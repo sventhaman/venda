@@ -1,4 +1,4 @@
-import { ListingSearchQuery, NewListing } from "@ichiba/schema";
+import { ListingSearchQuery, NewListing } from "@venda/schema";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchListings, getListing } from "../lib/listings.js";

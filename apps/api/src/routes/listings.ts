@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ListingSearchQuery, NewListing } from "@ichiba/schema";
+import { ListingSearchQuery, NewListing } from "@venda/schema";
 import { z } from "zod";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, requireScope, type AuthVariables } from "../middleware/auth.js";

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ListingSearchQuery, type Listing } from "@ichiba/schema";
+import { ListingSearchQuery, type Listing } from "@venda/schema";
 import { z } from "zod";
 
 const VERTICAL_DETAIL_TABLE: Record<string, string> = {

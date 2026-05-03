@@ -50,7 +50,7 @@ export default async function SavedListingsPage() {
 
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">Saved listings</h1>
       <p className="mt-2 text-sm text-ink-mute">
-        Things you&apos;ve hearted across ichiba.{" "}
+        Things you&apos;ve hearted across venda.{" "}
         {stale > 0 && (
           <span className="text-ink">
             {stale} item{stale === 1 ? "" : "s"} no longer available — hidden.

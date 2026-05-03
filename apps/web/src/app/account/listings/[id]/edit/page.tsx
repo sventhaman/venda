@@ -10,7 +10,7 @@ import { CarsForm } from "@/components/listing-form/cars-form";
 import { RealEstateForm } from "@/components/listing-form/realestate-form";
 import { JobsForm } from "@/components/listing-form/jobs-form";
 import { ServicesForm } from "@/components/listing-form/services-form";
-import { type Vertical } from "@ichiba/schema";
+import { type Vertical } from "@venda/schema";
 
 const VERTICAL_DETAIL_TABLE: Record<string, string> = {
   goods: "listing_goods",

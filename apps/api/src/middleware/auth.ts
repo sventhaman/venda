@@ -10,7 +10,7 @@ export type AuthVariables = {
   supabase: SupabaseClient;
 };
 
-const API_KEY_PREFIX = "ichiba_";
+const API_KEY_PREFIX = "venda_";
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
@@ -21,7 +21,7 @@ async function sha256Hex(input: string): Promise<string> {
 
 // Resolve auth from either:
 //   Authorization: Bearer <supabase-jwt>     (human session)
-//   X-API-Key: ichiba_<...>                  (agent key)
+//   X-API-Key: venda_<...>                   (agent key)
 // On success, sets a Supabase client on the context that respects RLS as that user.
 export const authMiddleware: MiddlewareHandler<{
   Bindings: Env;

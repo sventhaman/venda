@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { VERTICALS, type Vertical } from "@ichiba/schema";
+import { VERTICALS, type Vertical } from "@venda/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { submitNewListing } from "./actions";
 import { SubmitBar } from "@/components/listing-form/shared";

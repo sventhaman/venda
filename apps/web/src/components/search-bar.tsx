@@ -41,7 +41,7 @@ export function SearchBar({
           name="q"
           defaultValue={defaultValue}
           placeholder="Search across goods, cars, real estate, jobs, services…"
-          aria-label="Search ichiba"
+          aria-label="Search venda"
           className={`flex-1 bg-transparent outline-none placeholder:text-ink-mute ${
             isLg ? "text-base" : "text-sm"
           }`}

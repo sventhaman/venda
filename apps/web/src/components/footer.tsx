@@ -34,8 +34,8 @@ export function Footer() {
     <footer className="mt-24 border-t border-ink-line bg-ink-fog">
       <div className="mx-auto grid max-w-page gap-10 px-6 py-12 text-sm text-ink-mute md:grid-cols-4">
         <div>
-          <div className="mb-3 text-base font-semibold text-ink">ichiba</div>
-          <p>The agent-first marketplace. Buy, sell, and hire — through humans or agents.</p>
+          <div className="mb-3 text-base font-semibold text-ink">venda</div>
+          <p>Buy, sell, hire — humans and agents on the same marketplace.</p>
         </div>
         {SECTIONS.map((s) => (
           <div key={s.title}>
@@ -53,7 +53,7 @@ export function Footer() {
         ))}
       </div>
       <div className="mx-auto max-w-page px-6 pb-8 text-xs text-ink-mute">
-        © {new Date().getFullYear()} ichiba
+        © {new Date().getFullYear()} venda
       </div>
     </footer>
   );

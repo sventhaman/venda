@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-import type { Vertical } from "@ichiba/schema";
+import type { Vertical } from "@venda/schema";
 
 // Auto-submitting filter sidebar. Each interaction routes to the same path
 // with updated search params via router.push — no Apply button required.

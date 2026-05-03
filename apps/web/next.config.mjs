@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@ichiba/schema"],
+  transpilePackages: ["@venda/schema"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },

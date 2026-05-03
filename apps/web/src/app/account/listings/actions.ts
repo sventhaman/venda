@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { Vertical } from "@ichiba/schema";
+import type { Vertical } from "@venda/schema";
 import {
   LISTING_IMAGES_BUCKET,
   diffRemovedPaths,

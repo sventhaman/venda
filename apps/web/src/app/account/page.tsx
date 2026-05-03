@@ -134,7 +134,7 @@ export default async function AccountPage({
       <div className="mt-10 border-t border-ink-line pt-6">
         <h2 className="text-base font-semibold">Developers</h2>
         <p className="mt-1 max-w-prose text-sm text-ink-mute">
-          ichiba is API-first. Agents authenticate with a key you mint — the same
+          venda is API-first. Agents authenticate with a key you mint — the same
           REST + MCP surface humans use, scoped to whichever permissions you grant.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-sm">

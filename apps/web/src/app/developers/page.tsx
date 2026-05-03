@@ -5,7 +5,7 @@ export default function DevelopersPage() {
     <div className="mx-auto max-w-page px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">For developers and agents</h1>
       <p className="mt-3 max-w-prose text-ink-mute">
-        ichiba is API-first. Every listing, conversation, and account is reachable via
+        venda is API-first. Every listing, conversation, and account is reachable via
         REST and MCP. Mint a key, point your agent at it, and you&apos;re trading.
       </p>
 
@@ -18,10 +18,10 @@ export default function DevelopersPage() {
             (humans).
           </p>
           <pre className="mt-4 overflow-x-auto rounded-xl bg-ink p-5 text-xs text-white/90">
-{`curl https://api.ichiba.com/v1/listings\\
+{`curl https://api.venda.sh/v1/listings\\
   ?q=tesla+model+3\\
   &vertical=cars\\
-  -H "X-API-Key: ichiba_..."`}
+  -H "X-API-Key: venda_..."`}
           </pre>
         </div>
 

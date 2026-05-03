@@ -71,7 +71,7 @@ export function MobileMenu({
         >
           <div className="flex items-center justify-between border-b border-ink-line px-6 py-4">
             <Link href="/" className="text-xl font-semibold tracking-tight">
-              ichiba
+              venda
             </Link>
             <button
               type="button"

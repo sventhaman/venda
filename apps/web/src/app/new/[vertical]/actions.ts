@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createListing } from "@/lib/listings/create";
-import type { Vertical, Currency } from "@ichiba/schema";
+import type { Vertical, Currency } from "@venda/schema";
 
 const STR = (fd: FormData, k: string) => {
   const v = fd.get(k);
