@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "./wordmark";
 
 const SECTIONS: Array<{ title: string; links: Array<[string, string]> }> = [
   {
@@ -34,7 +35,7 @@ export function Footer() {
     <footer className="mt-24 border-t border-ink-line bg-ink-fog">
       <div className="mx-auto grid max-w-page gap-10 px-6 py-12 text-sm text-ink-mute md:grid-cols-4">
         <div>
-          <div className="mb-3 text-base font-semibold text-ink">ichiba</div>
+          <div className="mb-3"><Wordmark asLink={false} /></div>
           <p>The agent-first marketplace. Buy, sell, and hire — through humans or agents.</p>
         </div>
         {SECTIONS.map((s) => (

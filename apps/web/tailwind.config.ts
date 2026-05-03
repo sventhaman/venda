@@ -1,27 +1,40 @@
 import type { Config } from "tailwindcss";
 
-// Nordic minimalist palette inspired by finn.no:
-// generous whitespace, near-black text on white, blue for actions, gray for chrome.
+// Palette: Nordic minimal foundation with a Japanese-coded accent.
+//   - ink: near-black + greys for the chrome and body
+//   - accent: persimmon (柿色 kaki-iro). A warm, distinctive marketplace
+//     orange tied to the name "ichiba" (市場). Replaces the borrowed
+//     finn.no blue.
+//   - brand: a deeper accent variant for hover/active states.
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         ink: {
-          DEFAULT: "#0c0c0c",
-          soft: "#1a1a1a",
+          DEFAULT: "#0a0a0a",
+          soft: "#171717",
           mute: "#5b5b5b",
           line: "#e5e5e5",
-          fog: "#f6f6f6",
+          fog: "#f6f5f1", // Slightly warm white — pairs with persimmon, less sterile.
         },
         accent: {
-          DEFAULT: "#0063fb",
-          hover: "#0050cc",
-          soft: "#e6efff",
+          DEFAULT: "#e8541b", // 柿色 — persimmon, the marketplace warm.
+          hover: "#c83f0d",
+          soft: "#fde8df",
+          ink: "#7c2c0e", // For high-contrast text over soft.
         },
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Stack used only for the kanji mark — falls back to system Japanese.
+        ja: [
+          '"Noto Sans JP"',
+          '"Hiragino Sans"',
+          '"Yu Gothic"',
+          "ui-sans-serif",
+          "sans-serif",
+        ],
       },
       maxWidth: {
         page: "1200px",
