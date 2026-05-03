@@ -1,8 +1,11 @@
 import { Hono } from "hono";
 import { ListingSearchQuery, NewListing } from "@ichiba/schema";
+import { z } from "zod";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, requireScope, type AuthVariables } from "../middleware/auth.js";
 import { getListing, searchListings } from "../lib/listings.js";
+
+const UuidParam = z.string().uuid();
 
 const VERTICAL_DETAIL_TABLE: Record<string, string> = {
   goods: "listing_goods",
@@ -31,9 +34,13 @@ listingsRoutes.get("/", async (c) => {
 
 // Public: get one.
 listingsRoutes.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!UuidParam.safeParse(id).success) {
+    return c.json({ error: "invalid listing id" }, 400);
+  }
   const { serviceClient } = await import("../lib/supabase.js");
   const supa = serviceClient(c.env);
-  const listing = await getListing(supa, c.req.param("id"));
+  const listing = await getListing(supa, id);
   if (!listing) return c.json({ error: "not found" }, 404);
   return c.json(listing);
 });
@@ -92,6 +99,9 @@ listingsRoutes.post("/", authMiddleware, requireScope("listings:write"), async (
 // Authenticated: update.
 listingsRoutes.patch("/:id", authMiddleware, requireScope("listings:write"), async (c) => {
   const id = c.req.param("id");
+  if (!UuidParam.safeParse(id).success) {
+    return c.json({ error: "invalid listing id" }, 400);
+  }
   const body = await c.req.json();
   const supa = c.get("supabase");
 
@@ -125,12 +135,16 @@ listingsRoutes.patch("/:id", authMiddleware, requireScope("listings:write"), asy
 
 // Authenticated: delete.
 listingsRoutes.delete("/:id", authMiddleware, requireScope("listings:write"), async (c) => {
+  const id = c.req.param("id");
+  if (!UuidParam.safeParse(id).success) {
+    return c.json({ error: "invalid listing id" }, 400);
+  }
   const supa = c.get("supabase");
   const userId = c.get("authedUserId");
   const { error, count } = await supa
     .from("listings")
     .delete({ count: "exact" })
-    .eq("id", c.req.param("id"))
+    .eq("id", id)
     .eq("seller_id", userId);
   if (error) return c.json({ error: error.message }, 400);
   if ((count ?? 0) === 0) return c.json({ error: "not found or not yours" }, 404);

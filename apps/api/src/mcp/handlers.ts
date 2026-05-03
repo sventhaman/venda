@@ -2,6 +2,7 @@ import { ListingSearchQuery, NewListing } from "@ichiba/schema";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchListings, getListing } from "../lib/listings.js";
+import { startOrFindConversation } from "./../lib/conversations.js";
 
 const VERTICAL_DETAIL_TABLE: Record<string, string> = {
   goods: "listing_goods",
@@ -117,19 +118,30 @@ export async function callTool(
 
       let conversationId = parsed.data.conversationId;
 
-      // listingId path: resume or create the unique buyer↔seller thread via
-      // the SECURITY DEFINER RPC (which pins the seller from the listing).
-      // We never accept an arbitrary recipientId — that would let a caller
-      // wire two unrelated users into a thread.
+      // listingId path: resume or create the unique buyer↔seller thread.
+      // Humans use the SECURITY DEFINER RPC (relies on auth.uid()). Agents
+      // go through the service-role client where auth.uid() is null, so
+      // we run the same flow inline using the userId we verified from the
+      // api_key. Never accept arbitrary recipientId from the client.
       if (!conversationId) {
-        const { data: convoId, error: rpcErr } = await ctx.supabase.rpc(
-          "start_conversation",
-          { _listing_id: parsed.data.listingId },
-        );
-        if (rpcErr || !convoId) {
-          return { ok: false, error: rpcErr?.message ?? "could not start conversation" };
+        if (ctx.isAgent) {
+          const r = await startOrFindConversation(
+            ctx.supabase,
+            ctx.userId,
+            parsed.data.listingId!,
+          );
+          if (!r.ok) return { ok: false, error: r.error };
+          conversationId = r.id;
+        } else {
+          const { data: convoId, error: rpcErr } = await ctx.supabase.rpc(
+            "start_conversation",
+            { _listing_id: parsed.data.listingId },
+          );
+          if (rpcErr || !convoId) {
+            return { ok: false, error: rpcErr?.message ?? "could not start conversation" };
+          }
+          conversationId = convoId as string;
         }
-        conversationId = convoId as string;
       } else {
         const { data: membership } = await ctx.supabase
           .from("conversation_participants")

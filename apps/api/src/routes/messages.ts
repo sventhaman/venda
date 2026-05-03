@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Env } from "../lib/supabase.js";
 import { authMiddleware, requireScope, type AuthVariables } from "../middleware/auth.js";
+import { startOrFindConversation } from "../lib/conversations.js";
+
+const UuidParam = z.string().uuid();
 
 export const messagesRoutes = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -29,6 +32,9 @@ messagesRoutes.get("/conversations/:id/messages", requireScope("messages:read"),
   const supa = c.get("supabase");
   const userId = c.get("authedUserId");
   const conversationId = c.req.param("id");
+  if (!UuidParam.safeParse(conversationId).success) {
+    return c.json({ error: "invalid conversation id" }, 400);
+  }
 
   const { data: membership } = await supa
     .from("conversation_participants")
@@ -72,15 +78,25 @@ messagesRoutes.post("/", requireScope("messages:write"), async (c) => {
 
   let conversationId = parsed.data.conversationId;
 
-  // listingId path: look up or create the unique thread between caller and seller.
+  // listingId path: look up or create the unique thread between caller and
+  // seller. Humans use the SECURITY DEFINER RPC (relies on auth.uid()).
+  // Agents go through the service-role client where auth.uid() is null, so
+  // we run the same flow inline using the userId we already verified from
+  // the api_key.
   if (!conversationId) {
-    const { data: convoId, error: rpcErr } = await supa.rpc("start_conversation", {
-      _listing_id: parsed.data.listingId,
-    });
-    if (rpcErr || !convoId) {
-      return c.json({ error: rpcErr?.message ?? "could not start conversation" }, 400);
+    if (isAgent) {
+      const r = await startOrFindConversation(supa, userId, parsed.data.listingId!);
+      if (!r.ok) return c.json({ error: r.error }, 400);
+      conversationId = r.id;
+    } else {
+      const { data: convoId, error: rpcErr } = await supa.rpc("start_conversation", {
+        _listing_id: parsed.data.listingId,
+      });
+      if (rpcErr || !convoId) {
+        return c.json({ error: rpcErr?.message ?? "could not start conversation" }, 400);
+      }
+      conversationId = convoId as string;
     }
-    conversationId = convoId as string;
   } else {
     // Verify the caller is a participant. RLS would catch this for human
     // sessions, but agents go through the service-role client.

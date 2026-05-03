@@ -54,11 +54,15 @@ apiKeysRoutes.post("/", async (c) => {
 });
 
 apiKeysRoutes.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return c.json({ error: "invalid api key id" }, 400);
+  }
   const supa = c.get("supabase");
   const { error } = await supa
     .from("api_keys")
     .update({ revoked_at: new Date().toISOString() })
-    .eq("id", c.req.param("id"))
+    .eq("id", id)
     .eq("owner_user_id", c.get("authedUserId"));
   if (error) return c.json({ error: error.message }, 400);
   return c.body(null, 204);
