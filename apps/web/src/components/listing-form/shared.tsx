@@ -1,5 +1,6 @@
 import { Checkbox, Field, FormSection, NumberInput, Select, TextArea, TextInput } from "./fields";
 import { ImageUploader } from "./image-uploader";
+import { SubmitButton } from "@/components/submit-button";
 
 const CURRENCIES: Array<[string, string]> = [
   ["NOK", "NOK"],
@@ -96,8 +97,8 @@ export function SubmitBar({
   vertical: string;
   mode?: "create" | "edit";
 }) {
-  const label =
-    mode === "edit" ? "Save changes" : `Publish ${vertical} listing`;
+  const label = mode === "edit" ? "Save changes" : `Publish ${vertical} listing`;
+  const pendingLabel = mode === "edit" ? "Saving…" : "Publishing…";
   const hint =
     mode === "edit"
       ? "Saving updates the listing immediately."
@@ -106,12 +107,7 @@ export function SubmitBar({
     <div className="sticky bottom-0 -mx-6 mt-10 border-t border-ink-line bg-white/90 px-6 py-4 backdrop-blur">
       <div className="mx-auto flex max-w-2xl items-center justify-between">
         <p className="text-xs text-ink-mute">{hint}</p>
-        <button
-          type="submit"
-          className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-white hover:bg-ink-soft"
-        >
-          {label}
-        </button>
+        <SubmitButton pendingLabel={pendingLabel}>{label}</SubmitButton>
       </div>
     </div>
   );

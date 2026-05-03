@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { updateListingStatus } from "./actions";
 import { DeleteListingButton } from "@/components/delete-listing-button";
+import { RowActionButton } from "./row-action-button";
 
 type ListingRow = {
   id: string;
@@ -177,12 +178,9 @@ function Row({ listing: l }: { listing: ListingRow }) {
           <form action={updateListingStatus}>
             <input type="hidden" name="id" value={l.id} />
             <input type="hidden" name="status" value="paused" />
-            <button
-              type="submit"
-              className="rounded-full border border-ink-line px-3 py-1 hover:border-ink"
-            >
+            <RowActionButton variant="secondary" pendingLabel="Pausing…">
               Pause
-            </button>
+            </RowActionButton>
           </form>
         )}
 
@@ -190,12 +188,9 @@ function Row({ listing: l }: { listing: ListingRow }) {
           <form action={updateListingStatus}>
             <input type="hidden" name="id" value={l.id} />
             <input type="hidden" name="status" value="active" />
-            <button
-              type="submit"
-              className="rounded-full bg-ink px-3 py-1 text-white hover:bg-ink-soft"
-            >
+            <RowActionButton variant="publish" pendingLabel="Publishing…">
               Publish
-            </button>
+            </RowActionButton>
           </form>
         )}
 

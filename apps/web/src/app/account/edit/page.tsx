@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "./actions";
 import { AvatarUploader } from "@/components/account/avatar-uploader";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function AccountEditPage({
   searchParams,
@@ -117,12 +118,7 @@ export default async function AccountEditPage({
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-white hover:bg-ink-soft"
-          >
-            Save changes
-          </button>
+          <SubmitButton pendingLabel="Saving…">Save changes</SubmitButton>
         </div>
       </form>
     </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signIn } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function SignInPage({
   searchParams,
@@ -47,12 +48,9 @@ export default async function SignInPage({
           </div>
         )}
 
-        <button
-          type="submit"
-          className="mt-2 rounded-full bg-ink py-3 text-sm font-medium text-white hover:bg-ink-soft"
-        >
+        <SubmitButton fullWidth pendingLabel="Signing in…" className="mt-2 py-3">
           Sign in
-        </button>
+        </SubmitButton>
       </form>
 
       <div className="text-sm text-ink-mute">
