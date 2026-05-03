@@ -31,10 +31,21 @@ const FULL_SELECT = `
   listing_services(*)
 `.replace(/\s+/g, " ");
 
+// Vertical-specific filter map. Each entry names a column on the matching
+// detail table; PostgREST embedded filtering applies them transparently.
+type DetailFilters = {
+  goods?: { category?: string; condition?: string };
+  cars?: { fuelType?: string; transmission?: string; bodyType?: string };
+  realestate?: { dealType?: string; propertyType?: string };
+  jobs?: { employmentType?: string; workArrangement?: string };
+  services?: { category?: string; pricingModel?: string };
+};
+
 export type SearchInput = Partial<ListingSearchQuery> & {
   vertical?: string;
   page?: number;
   pageSize?: number;
+  details?: DetailFilters;
 };
 
 export type SearchResult = {
@@ -69,6 +80,34 @@ export async function searchListings(
   if (q.city) query = query.ilike("city", q.city);
   if (q.q) {
     query = query.textSearch("search", q.q, { type: "websearch", config: "simple" });
+  }
+
+  // Per-vertical detail filters. PostgREST applies these against the embedded
+  // relation when the relation name is used in the column path. We only apply
+  // them when a vertical is set — other listings would have NULL for that
+  // detail row and `eq` would never match (that's the desired behavior).
+  const d = q.details;
+  if (q.vertical && d) {
+    const apply = (rel: string, col: string, val: string | undefined) => {
+      if (val) query = query.eq(`${rel}.${col}`, val);
+    };
+    if (q.vertical === "goods" && d.goods) {
+      apply("listing_goods", "category", d.goods.category);
+      apply("listing_goods", "condition", d.goods.condition);
+    } else if (q.vertical === "cars" && d.cars) {
+      apply("listing_cars", "fuel_type", d.cars.fuelType);
+      apply("listing_cars", "transmission", d.cars.transmission);
+      apply("listing_cars", "body_type", d.cars.bodyType);
+    } else if (q.vertical === "realestate" && d.realestate) {
+      apply("listing_realestate", "deal_type", d.realestate.dealType);
+      apply("listing_realestate", "property_type", d.realestate.propertyType);
+    } else if (q.vertical === "jobs" && d.jobs) {
+      apply("listing_jobs", "employment_type", d.jobs.employmentType);
+      apply("listing_jobs", "work_arrangement", d.jobs.workArrangement);
+    } else if (q.vertical === "services" && d.services) {
+      apply("listing_services", "category", d.services.category);
+      apply("listing_services", "pricing_model", d.services.pricingModel);
+    }
   }
 
   switch (sort) {

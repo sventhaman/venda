@@ -1,53 +1,60 @@
 import type { Vertical } from "@ichiba/schema";
 
-// Sidebar with the filters that actually plumb through to /v1/listings today.
-// Unfinished per-vertical checkbox groups (categories, makes, etc) are
-// deliberately omitted so the page doesn't appear broken when a checkbox
-// produces no effect — they'll come back vertical-by-vertical as the API
-// surface grows.
-export function FilterSidebar({ vertical }: { vertical: Vertical }) {
+// Filter sidebar with per-vertical filter groups. All filters are GET form
+// fields — submitting reloads /[vertical] with new query params, which the
+// page reads and passes through to searchListings. The page also reads the
+// current sp object so we re-render selected values via defaultValue.
+export function FilterSidebar({
+  vertical,
+  selected = {},
+}: {
+  vertical: Vertical;
+  selected?: Record<string, string | undefined>;
+}) {
   return (
     <aside className="hidden w-64 shrink-0 lg:block">
-      {/* GET form auto-applies filters when submitted — pairs with the
-          page's URL-driven query state. */}
       <form action={`/${vertical}`} className="flex flex-col gap-1">
-        <FilterGroup title="Price">
+        <Group title="Price">
           <div className="flex gap-2">
-            <input
+            <Input
               name="minPrice"
               type="number"
               min={0}
               placeholder="Min"
-              className="w-full rounded-lg border border-ink-line px-2 py-1.5 text-sm focus:border-ink focus:outline-none"
+              defaultValue={selected.minPrice}
             />
-            <input
+            <Input
               name="maxPrice"
               type="number"
               min={0}
               placeholder="Max"
-              className="w-full rounded-lg border border-ink-line px-2 py-1.5 text-sm focus:border-ink focus:outline-none"
+              defaultValue={selected.maxPrice}
             />
           </div>
-        </FilterGroup>
+        </Group>
 
-        <FilterGroup title="Location">
-          <input
-            name="city"
-            placeholder="City"
-            className="w-full rounded-lg border border-ink-line px-2 py-1.5 text-sm focus:border-ink focus:outline-none"
-          />
-          <input
+        <Group title="Location">
+          <Input name="city" placeholder="City" defaultValue={selected.city} />
+          <Input
             name="region"
             placeholder="Region"
-            className="mt-2 w-full rounded-lg border border-ink-line px-2 py-1.5 text-sm focus:border-ink focus:outline-none"
+            defaultValue={selected.region}
+            className="mt-2"
           />
-          <input
+          <Input
             name="country"
-            maxLength={2}
             placeholder="Country (NO, US, …)"
-            className="mt-2 w-full rounded-lg border border-ink-line px-2 py-1.5 text-sm uppercase focus:border-ink focus:outline-none"
+            maxLength={2}
+            defaultValue={selected.country}
+            className="mt-2 uppercase"
           />
-        </FilterGroup>
+        </Group>
+
+        {vertical === "goods" && <GoodsFilters selected={selected} />}
+        {vertical === "cars" && <CarsFilters selected={selected} />}
+        {vertical === "realestate" && <RealEstateFilters selected={selected} />}
+        {vertical === "jobs" && <JobsFilters selected={selected} />}
+        {vertical === "services" && <ServicesFilters selected={selected} />}
 
         <button
           type="submit"
@@ -55,12 +62,240 @@ export function FilterSidebar({ vertical }: { vertical: Vertical }) {
         >
           Apply filters
         </button>
+
+        {hasAny(selected) && (
+          <a
+            href={`/${vertical}`}
+            className="mt-2 block text-center text-xs text-ink-mute underline-offset-2 hover:underline"
+          >
+            Clear all filters
+          </a>
+        )}
       </form>
     </aside>
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function hasAny(s: Record<string, string | undefined>) {
+  const keys = Object.keys(s).filter((k) => k !== "page" && k !== "sort");
+  return keys.some((k) => s[k]);
+}
+
+// ---------- Per-vertical groups ----------
+
+function GoodsFilters({ selected }: { selected: Record<string, string | undefined> }) {
+  return (
+    <>
+      <Group title="Category">
+        <Select
+          name="category"
+          defaultValue={selected.category ?? ""}
+          options={[
+            ["", "All categories"],
+            ["clothing", "Clothing"],
+            ["furniture", "Furniture"],
+            ["electronics", "Electronics"],
+            ["appliances", "Appliances"],
+            ["sports_outdoors", "Sports & outdoors"],
+            ["toys_games", "Toys & games"],
+            ["books_media", "Books & media"],
+            ["home_garden", "Home & garden"],
+            ["tools", "Tools"],
+            ["kids_baby", "Kids & baby"],
+            ["art_collectibles", "Art & collectibles"],
+            ["other", "Other"],
+          ]}
+        />
+      </Group>
+      <Group title="Condition">
+        <Select
+          name="condition"
+          defaultValue={selected.condition ?? ""}
+          options={[
+            ["", "Any condition"],
+            ["new", "New"],
+            ["like_new", "Like new"],
+            ["good", "Good"],
+            ["fair", "Fair"],
+            ["for_parts", "For parts"],
+          ]}
+        />
+      </Group>
+    </>
+  );
+}
+
+function CarsFilters({ selected }: { selected: Record<string, string | undefined> }) {
+  return (
+    <>
+      <Group title="Fuel">
+        <Select
+          name="fuelType"
+          defaultValue={selected.fuelType ?? ""}
+          options={[
+            ["", "Any fuel"],
+            ["petrol", "Petrol"],
+            ["diesel", "Diesel"],
+            ["hybrid", "Hybrid"],
+            ["phev", "Plug-in hybrid"],
+            ["electric", "Electric"],
+            ["lpg", "LPG"],
+            ["other", "Other"],
+          ]}
+        />
+      </Group>
+      <Group title="Transmission">
+        <Select
+          name="transmission"
+          defaultValue={selected.transmission ?? ""}
+          options={[
+            ["", "Any"],
+            ["manual", "Manual"],
+            ["automatic", "Automatic"],
+            ["semi_auto", "Semi-auto"],
+          ]}
+        />
+      </Group>
+      <Group title="Body type">
+        <Select
+          name="bodyType"
+          defaultValue={selected.bodyType ?? ""}
+          options={[
+            ["", "Any"],
+            ["sedan", "Sedan"],
+            ["hatchback", "Hatchback"],
+            ["wagon", "Wagon"],
+            ["suv", "SUV"],
+            ["coupe", "Coupe"],
+            ["convertible", "Convertible"],
+            ["pickup", "Pickup"],
+            ["van", "Van"],
+            ["minivan", "Minivan"],
+            ["other", "Other"],
+          ]}
+        />
+      </Group>
+    </>
+  );
+}
+
+function RealEstateFilters({ selected }: { selected: Record<string, string | undefined> }) {
+  return (
+    <>
+      <Group title="Listing">
+        <Select
+          name="dealType"
+          defaultValue={selected.dealType ?? ""}
+          options={[
+            ["", "All"],
+            ["sale", "For sale"],
+            ["rent_long", "Long-term rent"],
+            ["rent_short", "Short-term rent"],
+          ]}
+        />
+      </Group>
+      <Group title="Property">
+        <Select
+          name="propertyType"
+          defaultValue={selected.propertyType ?? ""}
+          options={[
+            ["", "Any property"],
+            ["apartment", "Apartment"],
+            ["house", "House"],
+            ["townhouse", "Townhouse"],
+            ["cabin", "Cabin"],
+            ["plot", "Plot"],
+            ["commercial", "Commercial"],
+            ["room", "Room"],
+            ["other", "Other"],
+          ]}
+        />
+      </Group>
+    </>
+  );
+}
+
+function JobsFilters({ selected }: { selected: Record<string, string | undefined> }) {
+  return (
+    <>
+      <Group title="Employment">
+        <Select
+          name="employmentType"
+          defaultValue={selected.employmentType ?? ""}
+          options={[
+            ["", "Any"],
+            ["full_time", "Full time"],
+            ["part_time", "Part time"],
+            ["contract", "Contract"],
+            ["temporary", "Temporary"],
+            ["internship", "Internship"],
+            ["freelance", "Freelance"],
+            ["volunteer", "Volunteer"],
+          ]}
+        />
+      </Group>
+      <Group title="Arrangement">
+        <Select
+          name="workArrangement"
+          defaultValue={selected.workArrangement ?? ""}
+          options={[
+            ["", "Any"],
+            ["onsite", "On-site"],
+            ["remote", "Remote"],
+            ["hybrid", "Hybrid"],
+          ]}
+        />
+      </Group>
+    </>
+  );
+}
+
+function ServicesFilters({ selected }: { selected: Record<string, string | undefined> }) {
+  return (
+    <>
+      <Group title="Category">
+        <Select
+          name="category"
+          defaultValue={selected.category ?? ""}
+          options={[
+            ["", "Any"],
+            ["home_repair", "Home repair"],
+            ["cleaning", "Cleaning"],
+            ["moving", "Moving"],
+            ["tutoring", "Tutoring"],
+            ["design", "Design"],
+            ["development", "Development"],
+            ["writing", "Writing"],
+            ["marketing", "Marketing"],
+            ["consulting", "Consulting"],
+            ["health_wellness", "Health & wellness"],
+            ["events", "Events"],
+            ["transportation", "Transportation"],
+            ["other", "Other"],
+          ]}
+        />
+      </Group>
+      <Group title="Pricing">
+        <Select
+          name="pricingModel"
+          defaultValue={selected.pricingModel ?? ""}
+          options={[
+            ["", "Any"],
+            ["hourly", "Hourly"],
+            ["fixed", "Fixed"],
+            ["daily", "Daily"],
+            ["project", "Per project"],
+            ["quote_only", "Quote only"],
+          ]}
+        />
+      </Group>
+    </>
+  );
+}
+
+// ---------- Primitives ----------
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <details
       open
@@ -72,5 +307,38 @@ function FilterGroup({ title, children }: { title: string; children: React.React
       </summary>
       <div className="space-y-2 text-sm">{children}</div>
     </details>
+  );
+}
+
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`w-full rounded-md border border-ink-edge px-2 py-1.5 text-sm focus:border-ink focus:outline-none ${props.className ?? ""}`}
+    />
+  );
+}
+
+function Select({
+  options,
+  name,
+  defaultValue,
+}: {
+  options: Array<[string, string]>;
+  name: string;
+  defaultValue?: string;
+}) {
+  return (
+    <select
+      name={name}
+      defaultValue={defaultValue}
+      className="w-full rounded-md border border-ink-edge bg-white px-2 py-1.5 text-sm focus:border-ink focus:outline-none"
+    >
+      {options.map(([v, l]) => (
+        <option key={v} value={v}>
+          {l}
+        </option>
+      ))}
+    </select>
   );
 }

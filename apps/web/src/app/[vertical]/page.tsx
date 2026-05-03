@@ -32,6 +32,34 @@ export default async function VerticalPage({
   const sort = sp.sort ?? "newest";
 
   const supabase = await createClient();
+  // Per-vertical detail filters from the URL. Only the keys that match the
+  // current vertical are read; everything else stays in the URL but is ignored
+  // by the search.
+  const v = vertical as Vertical;
+  const details = {
+    goods: v === "goods" ? { category: sp.category, condition: sp.condition } : undefined,
+    cars:
+      v === "cars"
+        ? {
+            fuelType: sp.fuelType,
+            transmission: sp.transmission,
+            bodyType: sp.bodyType,
+          }
+        : undefined,
+    realestate:
+      v === "realestate"
+        ? { dealType: sp.dealType, propertyType: sp.propertyType }
+        : undefined,
+    jobs:
+      v === "jobs"
+        ? { employmentType: sp.employmentType, workArrangement: sp.workArrangement }
+        : undefined,
+    services:
+      v === "services"
+        ? { category: sp.category, pricingModel: sp.pricingModel }
+        : undefined,
+  };
+
   let result;
   try {
     result = await searchListings(supabase, {
@@ -45,6 +73,7 @@ export default async function VerticalPage({
       sort: sort as any,
       page,
       pageSize: 24,
+      details,
     });
   } catch {
     result = { items: [], total: 0, page, pageSize: 24 };
@@ -85,7 +114,7 @@ export default async function VerticalPage({
       </div>
 
       <div className="mt-10 flex gap-10">
-        <FilterSidebar vertical={vertical as Vertical} />
+        <FilterSidebar vertical={vertical as Vertical} selected={sp} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3 border-b border-ink-line pb-3">
