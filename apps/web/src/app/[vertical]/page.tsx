@@ -84,9 +84,9 @@ export default async function VerticalPage({
           {result.items.length === 0 ? (
             <EmptyState vertical={vertical as Vertical} />
           ) : (
-            <ul className="divide-y divide-ink-line">
+            <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {result.items.map((listing) => (
-                <li key={listing.id} className="py-3 first:pt-5">
+                <li key={listing.id}>
                   <ListingCard listing={listing} />
                 </li>
               ))}

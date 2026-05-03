@@ -2,8 +2,12 @@ import Link from "next/link";
 import type { Listing } from "@ichiba/schema";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 
-// Card layout follows finn.no's distinctive choice: price ABOVE title, image left,
-// generous padding, location + timestamp as quiet metadata at the bottom.
+// Portrait-tile card matching finn.no's Torget grid: image on top (3:4
+// aspect), price + title + meta below. Hierarchy by font *weight*, not size:
+//   - price 16px BOLD  (text-base font-bold)
+//   - title 14px regular (text-sm)
+//   - meta 12px mute (text-xs text-ink-mute)
+// Subtle two-stop shadow gives depth without a heavy border.
 export function ListingCard({ listing }: { listing: Listing }) {
   const image = listing.images?.[0];
   const where =
@@ -12,42 +16,59 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <Link
       href={`/${listing.vertical}/${listing.id}`}
-      className="group flex gap-5 rounded-xl border border-transparent p-3 transition hover:border-ink-line hover:bg-ink-fog/50"
+      className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-card transition hover:shadow-card-hover"
     >
-      <div className="relative aspect-[4/3] w-48 shrink-0 overflow-hidden rounded-lg bg-ink-fog">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-ink-fog">
         {image ? (
           <img
             src={image.url}
             alt={image.alt ?? listing.title}
-            className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-ink-mute">
-            no image
-          </div>
+          <PlaceholderImage />
         )}
         {listing.agentCreated && (
-          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium tracking-wide text-ink-mute backdrop-blur">
+          <span className="absolute left-2 top-2 rounded bg-white/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-accent backdrop-blur">
             via agent
           </span>
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-1">
-        <div className="text-lg font-semibold tabular-nums">{formatPrice(listing.price)}</div>
-        <h3 className="line-clamp-2 text-base font-medium text-ink group-hover:underline">
+      <div className="flex min-w-0 flex-col gap-0.5 px-3 py-3">
+        <div className="text-base font-bold tabular-nums">{formatPrice(listing.price)}</div>
+        <h3 className="line-clamp-2 text-sm text-ink group-hover:underline">
           {listing.title}
         </h3>
-        {listing.description && (
-          <p className="line-clamp-1 text-sm text-ink-mute">{listing.description}</p>
-        )}
-        <div className="mt-auto flex items-center gap-3 text-xs text-ink-mute">
-          <span>{where}</span>
+        <div className="mt-2 flex items-center gap-2 text-xs text-ink-mute">
+          <span className="truncate">{where}</span>
           <span aria-hidden>·</span>
-          <span>{formatTimeAgo(listing.publishedAt ?? listing.createdAt)}</span>
+          <span className="shrink-0">
+            {formatTimeAgo(listing.publishedAt ?? listing.createdAt)}
+          </span>
         </div>
       </div>
     </Link>
+  );
+}
+
+function PlaceholderImage() {
+  return (
+    <div className="flex h-full w-full items-center justify-center text-ink-mute/50">
+      <svg
+        width="40"
+        height="40"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        aria-hidden
+      >
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="M21 15l-5-5L5 21" />
+      </svg>
+    </div>
   );
 }
