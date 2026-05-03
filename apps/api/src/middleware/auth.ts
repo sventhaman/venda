@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { serviceClient, userClient, type Env } from "../lib/supabase.js";
+import { checkRateLimit } from "../lib/rate-limit.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type AuthVariables = {
@@ -34,13 +35,30 @@ export const authMiddleware: MiddlewareHandler<{
     const svc = serviceClient(c.env);
     const { data, error } = await svc
       .from("api_keys")
-      .select("owner_user_id, scopes, revoked_at, expires_at")
+      .select("owner_user_id, scopes, revoked_at, expires_at, rate_limit_per_minute")
       .eq("key_hash", hash)
       .maybeSingle();
 
     if (error || !data || data.revoked_at) return c.json({ error: "invalid api key" }, 401);
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
       return c.json({ error: "api key expired" }, 401);
+    }
+
+    // Per-key sliding-window rate limit. Bucket lives in module memory so
+    // each Worker isolate enforces its own copy — slightly leaky under load
+    // but enough to prevent obvious abuse from a single key.
+    const limit = data.rate_limit_per_minute ?? 120;
+    const rl = checkRateLimit(hash, limit);
+    c.header("X-RateLimit-Limit", String(rl.limit));
+    c.header("X-RateLimit-Remaining", String(rl.remaining));
+    c.header("X-RateLimit-Reset", String(Math.floor(rl.resetAt / 1000)));
+    if (!rl.ok) {
+      const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000));
+      c.header("Retry-After", String(retryAfter));
+      return c.json(
+        { error: "rate limit exceeded", limit: rl.limit, retryAfter },
+        429,
+      );
     }
 
     // Touch last_used_at without blocking the request.
