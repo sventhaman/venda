@@ -3,6 +3,7 @@ import Link from "next/link";
 import { VERTICALS, type Vertical } from "@ichiba/schema";
 import { searchListings } from "@/lib/listings-server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/listing-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { SearchBar } from "@/components/search-bar";
@@ -51,6 +52,22 @@ export default async function VerticalPage({
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
+  // Pre-fetch the user's saved listing ids that intersect this page's results,
+  // so each card can render its heart in the correct state without a per-card
+  // round trip. RLS gates favorites to the caller's own rows, so this is a
+  // no-op for anon viewers.
+  const user = await getCurrentUser();
+  let savedIds = new Set<string>();
+  if (user && result.items.length > 0) {
+    const ids = result.items.map((i) => i.id);
+    const { data } = await supabase
+      .from("listing_favorites")
+      .select("listing_id")
+      .eq("user_id", user.id)
+      .in("listing_id", ids);
+    savedIds = new Set((data ?? []).map((r) => r.listing_id));
+  }
+
   return (
     <div className="mx-auto max-w-page px-6 py-8">
       <div className="mb-6 flex items-center gap-2 text-sm text-ink-mute">
@@ -87,7 +104,11 @@ export default async function VerticalPage({
             <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {result.items.map((listing) => (
                 <li key={listing.id}>
-                  <ListingCard listing={listing} />
+                  <ListingCard
+                    listing={listing}
+                    isSaved={savedIds.has(listing.id)}
+                    signedIn={!!user}
+                  />
                 </li>
               ))}
             </ul>

@@ -1,14 +1,23 @@
 import Link from "next/link";
 import type { Listing } from "@ichiba/schema";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
+import { CardFavoriteHeart } from "./card-favorite-heart";
 
 // Portrait-tile card matching finn.no's Torget grid: image on top (3:4
 // aspect), price + title + meta below. Hierarchy by font *weight*, not size:
 //   - price 16px BOLD  (text-base font-bold)
 //   - title 14px regular (text-sm)
 //   - meta 12px mute (text-xs text-ink-mute)
-// Subtle two-stop shadow gives depth without a heavy border.
-export function ListingCard({ listing }: { listing: Listing }) {
+// Subtle two-stop shadow + heart-favorite affordance top-right (finn signature).
+export function ListingCard({
+  listing,
+  isSaved = false,
+  signedIn = false,
+}: {
+  listing: Listing;
+  isSaved?: boolean;
+  signedIn?: boolean;
+}) {
   const image = listing.images?.[0];
   const where =
     [listing.location?.city, listing.location?.region].filter(Boolean).join(", ") || "—";
@@ -29,6 +38,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
         ) : (
           <PlaceholderImage />
         )}
+        <CardFavoriteHeart
+          listingId={listing.id}
+          initialSaved={isSaved}
+          signedIn={signedIn}
+        />
         {listing.agentCreated && (
           <span className="absolute left-2 top-2 rounded bg-white/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-accent backdrop-blur">
             via agent
