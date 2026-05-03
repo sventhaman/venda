@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { MobileMenu } from "./mobile-menu";
-import { Wordmark } from "./wordmark";
 
 const VERTICALS = [
   { slug: "goods", label: "Marketplace" },
@@ -35,7 +34,9 @@ export async function Header() {
   return (
     <header className="border-b border-ink-line bg-white">
       <div className="mx-auto flex max-w-page items-center gap-6 px-6 py-4">
-        <Wordmark />
+        <Link href="/" className="text-xl font-semibold tracking-tight">
+          ichiba
+        </Link>
 
         <nav className="hidden flex-1 items-center gap-6 text-sm md:flex">
           {VERTICALS.map((v) => (
