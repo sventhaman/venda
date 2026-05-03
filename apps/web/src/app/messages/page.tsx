@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { formatTimeAgo } from "@/lib/format";
 
 export default async function MessagesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+see+your+messages");
+  const supabase = await createClient();
 
   // Two-step fetch (RLS allows participant rows for self + same-thread, but the
   // simplest correct shape is: my participant rows → conversations → for each,

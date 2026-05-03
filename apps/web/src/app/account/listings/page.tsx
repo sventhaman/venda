@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { updateListingStatus } from "./actions";
 import { DeleteListingButton } from "@/components/delete-listing-button";
@@ -36,9 +37,9 @@ export default async function MyListingsPage({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+see+your+listings");
+  const supabase = await createClient();
 
   const { status: statusFilter = "all", error } = await searchParams;
 

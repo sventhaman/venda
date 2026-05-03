@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getListing } from "@/lib/api";
+import { getListing } from "@/lib/listings-server";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { MessageSellerButton } from "@/components/message-seller-button";
 import { SaveButton } from "@/components/save-button";
 import { DeleteListingButton } from "@/components/delete-listing-button";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
 export default async function ListingDetailPage({
   params,
@@ -13,11 +14,17 @@ export default async function ListingDetailPage({
   params: Promise<{ vertical: string; id: string }>;
 }) {
   const { vertical, id } = await params;
-  const listing = await getListing(id);
+  const supabase = await createClient();
+
+  // Direct Supabase query — skips the Hono hop the lib/api.ts client used to
+  // make. listings are public-readable, so we use the same user-scoped client
+  // we already have for the rest of the page.
+  const listing = await getListing(supabase, id);
   if (!listing || listing.vertical !== vertical) notFound();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Cache-deduped against the Header's getCurrentUser call — one Supabase
+  // Auth round trip per request, not two.
+  const user = await getCurrentUser();
   const isSeller = user?.id === listing.sellerId;
 
   // Has the current user already saved this listing? RLS limits the favorites

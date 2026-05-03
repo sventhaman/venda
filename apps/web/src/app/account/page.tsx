@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
 export default async function AccountPage({
   searchParams,
 }: {
   searchParams: Promise<{ ok?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+see+your+account");
+  const supabase = await createClient();
 
   const { ok } = await searchParams;
 

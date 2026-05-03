@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "./actions";
 import { AvatarUploader } from "@/components/account/avatar-uploader";
 
@@ -9,9 +10,9 @@ export default async function AccountEditPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+edit+your+profile");
+  const supabase = await createClient();
 
   const { data: profile } = await supabase
     .from("profiles")

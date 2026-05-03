@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { Thread } from "./thread";
 import { formatPrice } from "@/lib/format";
 import type { Currency } from "@ichiba/schema";
@@ -35,10 +36,9 @@ export default async function ConversationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+view+messages");
+  const supabase = await createClient();
 
   const { data: convo } = await supabase
     .from("conversations")

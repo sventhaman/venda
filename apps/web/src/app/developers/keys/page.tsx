@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { NewKeyDialog } from "./new-key-dialog";
 import { RevokeKeyButton } from "./revoke-key-button";
 import { formatTimeAgo } from "@/lib/format";
@@ -17,9 +18,9 @@ type ApiKeyRow = {
 };
 
 export default async function KeysPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+manage+API+keys");
+  const supabase = await createClient();
 
   const { data: rows } = await supabase
     .from("api_keys")

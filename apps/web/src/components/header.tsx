@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { MobileMenu } from "./mobile-menu";
 
 const VERTICALS = [
@@ -11,8 +12,11 @@ const VERTICALS = [
 ];
 
 export async function Header() {
+  // getCurrentUser() is React.cache'd — first call on this request hits
+  // Supabase Auth, subsequent calls (in pages, layouts, etc) reuse the same
+  // promise. So Header doesn't add a round trip when a page also needs the user.
+  const user = await getCurrentUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
   let displayName: string | null = null;
   let avatarUrl: string | null = null;

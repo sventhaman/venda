@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 
 type FavoriteRow = {
@@ -23,9 +24,9 @@ type FavoriteRow = {
 };
 
 export default async function SavedListingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+see+saved+listings");
+  const supabase = await createClient();
 
   const { data: rows } = await supabase
     .from("listing_favorites")

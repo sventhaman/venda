@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { updateListing } from "../../actions";
 import { SubmitBar, type ListingFormDefaults } from "@/components/listing-form/shared";
 import { DeleteListingButton } from "@/components/delete-listing-button";
@@ -35,9 +36,9 @@ export default async function EditListingPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+edit+listings");
+  const supabase = await createClient();
 
   const { data: listing } = await supabase
     .from("listings")

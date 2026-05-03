@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
 const VERTICALS = [
   { slug: "goods", label: "Marketplace item", sub: "Clothes, furniture, electronics, anything" },
@@ -11,8 +11,7 @@ const VERTICALS = [
 ];
 
 export default async function NewListingPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in?error=Sign+in+to+create+a+listing");
 
   return (

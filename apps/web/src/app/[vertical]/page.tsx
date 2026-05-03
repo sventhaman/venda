@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { VERTICALS, type Vertical } from "@ichiba/schema";
-import { searchListings } from "@/lib/api";
+import { searchListings } from "@/lib/listings-server";
+import { createClient } from "@/lib/supabase/server";
 import { ListingCard } from "@/components/listing-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { SearchBar } from "@/components/search-bar";
@@ -29,17 +30,18 @@ export default async function VerticalPage({
   const page = Number(sp.page ?? 1);
   const sort = sp.sort ?? "newest";
 
+  const supabase = await createClient();
   let result;
   try {
-    result = await searchListings({
+    result = await searchListings(supabase, {
       vertical,
       q: sp.q,
-      minPrice: sp.minPrice,
-      maxPrice: sp.maxPrice,
+      minPrice: sp.minPrice ? Number(sp.minPrice) : undefined,
+      maxPrice: sp.maxPrice ? Number(sp.maxPrice) : undefined,
       city: sp.city,
       region: sp.region,
       country: sp.country,
-      sort,
+      sort: sort as any,
       page,
       pageSize: 24,
     });

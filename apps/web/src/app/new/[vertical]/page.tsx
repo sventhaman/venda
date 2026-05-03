@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { VERTICALS, type Vertical } from "@ichiba/schema";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { submitNewListing } from "./actions";
 import { SubmitBar } from "@/components/listing-form/shared";
 import { GoodsForm } from "@/components/listing-form/goods-form";
@@ -28,8 +28,7 @@ export default async function NewListingForVertical({
   const { vertical } = await params;
   if (!VERTICALS.includes(vertical as Vertical)) notFound();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect(`/sign-in?error=Sign+in+to+create+a+listing`);
 
   const { error } = await searchParams;
