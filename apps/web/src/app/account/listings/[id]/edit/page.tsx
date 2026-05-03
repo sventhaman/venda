@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateListing, deleteListing } from "../../actions";
+import { updateListing } from "../../actions";
 import { SubmitBar, type ListingFormDefaults } from "@/components/listing-form/shared";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 import { GoodsForm } from "@/components/listing-form/goods-form";
 import { CarsForm } from "@/components/listing-form/cars-form";
 import { RealEstateForm } from "@/components/listing-form/realestate-form";
@@ -96,16 +97,14 @@ export default async function EditListingPage({
           Deleting a listing is permanent. Conversations about it stay in your inbox
           but lose the listing context.
         </p>
-        <form action={deleteListing} className="mt-4">
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="vertical" value={v} />
-          <button
-            type="submit"
-            className="rounded-full border border-red-500 px-5 py-2 text-sm text-red-700 hover:bg-red-50"
-          >
-            Delete listing permanently
-          </button>
-        </form>
+        <div className="mt-4">
+          <DeleteListingButton
+            listingId={id}
+            vertical={v}
+            title={listing.title}
+            variant="danger"
+          />
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
-import { deleteListing, updateListingStatus } from "./actions";
+import { updateListingStatus } from "./actions";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 
 type ListingRow = {
   id: string;
@@ -197,16 +198,12 @@ function Row({ listing: l }: { listing: ListingRow }) {
           </form>
         )}
 
-        <form action={deleteListing}>
-          <input type="hidden" name="id" value={l.id} />
-          <input type="hidden" name="vertical" value={l.vertical} />
-          <button
-            type="submit"
-            className="rounded-full border border-ink-line px-3 py-1 text-ink-mute hover:border-red-500 hover:text-red-600"
-          >
-            Delete
-          </button>
-        </form>
+        <DeleteListingButton
+          listingId={l.id}
+          vertical={l.vertical}
+          title={l.title}
+          variant="row"
+        />
       </div>
     </li>
   );

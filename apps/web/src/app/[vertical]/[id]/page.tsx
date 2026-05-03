@@ -4,8 +4,8 @@ import { getListing } from "@/lib/api";
 import { formatPrice, formatTimeAgo } from "@/lib/format";
 import { MessageSellerButton } from "@/components/message-seller-button";
 import { SaveButton } from "@/components/save-button";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 import { createClient } from "@/lib/supabase/server";
-import { deleteListing } from "@/app/account/listings/actions";
 
 export default async function ListingDetailPage({
   params,
@@ -89,16 +89,14 @@ export default async function ListingDetailPage({
                 >
                   Edit listing
                 </Link>
-                <form action={deleteListing} className="mt-2">
-                  <input type="hidden" name="id" value={listing.id} />
-                  <input type="hidden" name="vertical" value={listing.vertical} />
-                  <button
-                    type="submit"
-                    className="w-full rounded-full border border-ink-line py-3 text-sm text-ink-mute hover:border-red-500 hover:text-red-600"
-                  >
-                    Delete listing
-                  </button>
-                </form>
+                <div className="mt-2">
+                  <DeleteListingButton
+                    listingId={listing.id}
+                    vertical={listing.vertical}
+                    title={listing.title}
+                    variant="block"
+                  />
+                </div>
                 <div className="mt-3 text-center text-[10px] uppercase tracking-widest text-ink-mute">
                   This is your listing
                 </div>
