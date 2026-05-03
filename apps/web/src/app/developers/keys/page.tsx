@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { revokeApiKey } from "./actions";
 import { NewKeyDialog } from "./new-key-dialog";
+import { RevokeKeyButton } from "./revoke-key-button";
 import { formatTimeAgo } from "@/lib/format";
 
 type ApiKeyRow = {
@@ -94,15 +94,7 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
 
       <div className="sm:self-start">
         {isActive ? (
-          <form action={revokeApiKey}>
-            <input type="hidden" name="id" value={k.id} />
-            <button
-              type="submit"
-              className="rounded-full border border-ink-line px-4 py-1.5 text-xs hover:border-red-500 hover:text-red-600"
-            >
-              Revoke
-            </button>
-          </form>
+          <RevokeKeyButton keyId={k.id} label={k.label} prefix={k.prefix} />
         ) : (
           <span className="text-xs text-ink-mute">{status === "revoked" ? "Revoked" : "Expired"}</span>
         )}
