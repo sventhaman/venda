@@ -45,7 +45,7 @@ export function MessageSellerButton({ listingId }: { listingId: string }) {
         type="button"
         onClick={handleClick}
         disabled={pending}
-        className="w-full rounded-full bg-ink py-3 text-sm font-medium text-white transition hover:bg-ink-soft disabled:opacity-70"
+        className="w-full rounded-md bg-accent py-3 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-70"
       >
         {pending ? "Starting conversation…" : "Message seller"}
       </button>

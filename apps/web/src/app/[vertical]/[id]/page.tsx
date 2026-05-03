@@ -8,6 +8,14 @@ import { DeleteListingButton } from "@/components/delete-listing-button";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 
+const VERTICAL_LABELS: Record<string, string> = {
+  goods: "Marketplace",
+  cars: "Cars",
+  realestate: "Real estate",
+  jobs: "Jobs",
+  services: "Services",
+};
+
 export default async function ListingDetailPage({
   params,
 }: {
@@ -16,19 +24,12 @@ export default async function ListingDetailPage({
   const { vertical, id } = await params;
   const supabase = await createClient();
 
-  // Direct Supabase query — skips the Hono hop the lib/api.ts client used to
-  // make. listings are public-readable, so we use the same user-scoped client
-  // we already have for the rest of the page.
   const listing = await getListing(supabase, id);
   if (!listing || listing.vertical !== vertical) notFound();
 
-  // Cache-deduped against the Header's getCurrentUser call — one Supabase
-  // Auth round trip per request, not two.
   const user = await getCurrentUser();
   const isSeller = user?.id === listing.sellerId;
 
-  // Has the current user already saved this listing? RLS limits the favorites
-  // table to (auth.uid() = user_id), so this is a no-op for anon.
   let initialSaved = false;
   if (user) {
     const { data: fav } = await supabase
@@ -45,32 +46,73 @@ export default async function ListingDetailPage({
     .join(", ");
 
   return (
-    <div className="mx-auto max-w-page px-6 py-8">
-      <div className="mb-6 flex items-center gap-2 text-sm text-ink-mute">
-        <Link href="/" className="hover:text-ink">ichiba</Link>
-        <span aria-hidden>/</span>
-        <Link href={`/${listing.vertical}`} className="hover:text-ink capitalize">
-          {listing.vertical}
+    <div className="mx-auto max-w-page px-6 py-6 md:py-8">
+      {/* Breadcrumb (finn-style: blue links). Tightened to two levels. */}
+      <nav className="mb-4 flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+        <Link href={`/${listing.vertical}`} className="text-accent hover:underline">
+          {VERTICAL_LABELS[listing.vertical] ?? listing.vertical}
         </Link>
-        <span aria-hidden>/</span>
-        <span className="line-clamp-1 text-ink">{listing.title}</span>
-      </div>
+        <span aria-hidden className="text-ink-mute">/</span>
+        <span className="line-clamp-1 text-ink-mute">{listing.title}</span>
+      </nav>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      {/* finn pattern: image LEFT, title + price + CTAs RIGHT (sticky-ish on desktop). */}
+      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:gap-12">
         <div>
           <Gallery images={listing.images} title={listing.title} />
+        </div>
 
-          <h1 className="mt-8 text-3xl font-semibold tracking-tight">{listing.title}</h1>
-          <div className="mt-2 flex items-center gap-3 text-sm text-ink-mute">
-            <span>{where || "—"}</span>
-            <span aria-hidden>·</span>
-            <span>{formatTimeAgo(listing.publishedAt ?? listing.createdAt)}</span>
-            {listing.agentCreated && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{listing.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-mute">
+              {where && <span>{where}</span>}
+              {where && <span aria-hidden>·</span>}
+              <span>Posted {formatTimeAgo(listing.publishedAt ?? listing.createdAt)}</span>
+              {listing.agentCreated && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="rounded bg-accent-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-accent">
+                    via agent
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-baseline gap-3 border-y border-ink-line py-4">
+            <div className="text-4xl font-bold tabular-nums tracking-tight md:text-5xl">
+              {formatPrice(listing.price)}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {isSeller ? (
               <>
-                <span aria-hidden>·</span>
-                <span className="rounded-full bg-ink-fog px-2 py-0.5 text-[10px] tracking-wide">
-                  posted via agent
-                </span>
+                <Link
+                  href={`/account/listings/${listing.id}/edit`}
+                  className="block w-full rounded-md bg-ink py-3 text-center text-sm font-medium text-white hover:bg-ink-soft"
+                >
+                  Edit listing
+                </Link>
+                <DeleteListingButton
+                  listingId={listing.id}
+                  vertical={listing.vertical}
+                  title={listing.title}
+                  variant="block"
+                />
+                <div className="mt-2 text-center text-[11px] uppercase tracking-widest text-ink-mute">
+                  This is your listing
+                </div>
+              </>
+            ) : (
+              <>
+                <MessageSellerButton listingId={listing.id} />
+                <SaveButton
+                  listingId={listing.id}
+                  initialSaved={initialSaved}
+                  signedIn={!!user}
+                />
               </>
             )}
           </div>
@@ -78,58 +120,20 @@ export default async function ListingDetailPage({
           <DetailsGrid listing={listing} />
 
           {listing.description && (
-            <div className="mt-10 max-w-2xl whitespace-pre-wrap text-base leading-relaxed text-ink-soft">
-              {listing.description}
+            <div className="border-t border-ink-line pt-5">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-ink-mute">
+                Description
+              </h2>
+              <div className="mt-3 whitespace-pre-wrap text-base leading-relaxed text-ink-soft">
+                {listing.description}
+              </div>
             </div>
           )}
+
+          {isSeller && (
+            <div className="text-xs text-ink-mute">ID: {listing.id}</div>
+          )}
         </div>
-
-        <aside className="lg:sticky lg:top-8 lg:self-start">
-          <div className="rounded-2xl border border-ink-line p-6">
-            <div className="text-3xl font-semibold tabular-nums">{formatPrice(listing.price)}</div>
-
-            {isSeller ? (
-              <>
-                <Link
-                  href={`/account/listings/${listing.id}/edit`}
-                  className="mt-6 block w-full rounded-full bg-ink py-3 text-center text-sm font-medium text-white hover:bg-ink-soft"
-                >
-                  Edit listing
-                </Link>
-                <div className="mt-2">
-                  <DeleteListingButton
-                    listingId={listing.id}
-                    vertical={listing.vertical}
-                    title={listing.title}
-                    variant="block"
-                  />
-                </div>
-                <div className="mt-3 text-center text-[10px] uppercase tracking-widest text-ink-mute">
-                  This is your listing
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mt-6">
-                  <MessageSellerButton listingId={listing.id} />
-                </div>
-                <div className="mt-2">
-                  <SaveButton
-                    listingId={listing.id}
-                    initialSaved={initialSaved}
-                    signedIn={!!user}
-                  />
-                </div>
-              </>
-            )}
-
-            {isSeller && (
-              <div className="mt-6 border-t border-ink-line pt-4 text-xs text-ink-mute">
-                ID: {listing.id}
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
     </div>
   );
@@ -138,29 +142,35 @@ export default async function ListingDetailPage({
 function Gallery({ images, title }: { images: { url: string; alt?: string }[]; title: string }) {
   if (images.length === 0) {
     return (
-      <div className="aspect-[4/3] w-full rounded-2xl bg-ink-fog flex items-center justify-center text-ink-mute">
-        no image
+      <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-ink-fog text-ink-mute">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden>
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="9" cy="9" r="2" />
+          <path d="M21 15l-5-5L5 21" />
+        </svg>
       </div>
     );
   }
   const [hero, ...rest] = images;
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="flex flex-col gap-2">
       <img
         src={hero!.url}
         alt={hero!.alt ?? title}
-        className="col-span-4 aspect-[4/3] w-full rounded-2xl object-cover md:col-span-3"
+        className="aspect-[4/3] w-full rounded-lg object-cover"
       />
-      <div className="hidden flex-col gap-2 md:flex">
-        {rest.slice(0, 3).map((img, i) => (
-          <img
-            key={i}
-            src={img.url}
-            alt={img.alt ?? title}
-            className="h-full w-full flex-1 rounded-xl object-cover"
-          />
-        ))}
-      </div>
+      {rest.length > 0 && (
+        <div className="grid grid-cols-4 gap-2">
+          {rest.slice(0, 4).map((img, i) => (
+            <img
+              key={i}
+              src={img.url}
+              alt={img.alt ?? title}
+              className="aspect-square w-full rounded object-cover"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -170,10 +180,10 @@ function DetailsGrid({ listing }: { listing: Awaited<ReturnType<typeof getListin
   const rows = detailRows(listing);
   if (rows.length === 0) return null;
   return (
-    <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 border-t border-ink-line pt-6 text-sm md:grid-cols-3">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-ink-line pt-5 text-sm">
       {rows.map(([label, value]) => (
         <div key={label}>
-          <dt className="text-xs uppercase tracking-wide text-ink-mute">{label}</dt>
+          <dt className="text-xs uppercase tracking-widest text-ink-mute">{label}</dt>
           <dd className="mt-0.5 font-medium">{value}</dd>
         </div>
       ))}

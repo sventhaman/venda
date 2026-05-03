@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
-
-const VERTICALS = [
-  { slug: "goods", label: "Marketplace", sub: "Used clothes, furniture, anything" },
-  { slug: "cars", label: "Cars", sub: "Buy or sell" },
-  { slug: "realestate", label: "Real estate", sub: "Buy, sell, or rent" },
-  { slug: "jobs", label: "Jobs", sub: "Find or post" },
-  { slug: "services", label: "Services", sub: "Hire or offer" },
-];
+import { CategoryStrip } from "@/components/category-strip";
 
 export default function HomePage() {
   return (
@@ -24,23 +17,10 @@ export default function HomePage() {
         <div className="mt-10 max-w-2xl">
           <SearchBar />
         </div>
-      </section>
 
-      <section className="grid gap-3 pb-16 sm:grid-cols-2 lg:grid-cols-5">
-        {VERTICALS.map((v) => (
-          <Link
-            key={v.slug}
-            href={`/${v.slug}`}
-            className="rounded-2xl border border-ink-line p-6 transition hover:border-ink hover:bg-ink-fog/50"
-          >
-            <div className="text-base font-semibold">{v.label}</div>
-            <div className="mt-1 text-sm text-ink-mute">{v.sub}</div>
-            <div className="mt-6 flex items-center text-sm text-accent">
-              Browse
-              <span aria-hidden className="ml-1 transition group-hover:translate-x-0.5">→</span>
-            </div>
-          </Link>
-        ))}
+        <div className="mt-10 max-w-3xl">
+          <CategoryStrip />
+        </div>
       </section>
 
       <section className="rounded-3xl border border-ink-line bg-ink-fog/60 p-10 md:p-14">
@@ -54,7 +34,7 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 max-w-md text-ink-mute">
               Every listing, message, and account is reachable via REST and MCP.
-              Mint an API key, point your agent at it, and you're trading.
+              Mint an API key, point your agent at it, and you&apos;re trading.
             </p>
             <div className="mt-6 flex gap-3 text-sm">
               <Link href="/developers" className="rounded-full bg-ink px-5 py-2.5 text-white hover:bg-ink-soft">
