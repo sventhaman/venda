@@ -8,14 +8,9 @@ import { ListingCard } from "@/components/listing-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { SearchBar } from "@/components/search-bar";
 import { SortControl } from "./sort-control";
-
-const VERTICAL_TITLES: Record<Vertical, string> = {
-  goods: "Marketplace",
-  cars: "Cars",
-  realestate: "Real estate",
-  jobs: "Jobs",
-  services: "Services",
-};
+import { VERTICAL_META, activeFilterCount } from "./vertical-meta";
+import { FilterPills } from "./filter-pills";
+import { MobileFilterDrawer } from "./mobile-filter-drawer";
 
 export default async function VerticalPage({
   params,
@@ -104,38 +99,49 @@ export default async function VerticalPage({
     savedIds = new Set((data ?? []).map((r) => r.listing_id));
   }
 
+  const meta = VERTICAL_META[v];
+  const filterCount = activeFilterCount(sp);
+
   return (
     <div className="mx-auto max-w-page px-6 py-8">
       <div className="mb-6 flex items-center gap-2 text-sm text-ink-mute">
         <Link href="/" className="hover:text-ink">ichiba</Link>
         <span aria-hidden>/</span>
-        <span className="text-ink">{VERTICAL_TITLES[vertical as Vertical]}</span>
+        <span className="text-ink">{meta.title}</span>
       </div>
 
-      <h1 className="text-3xl font-semibold tracking-tight">
-        {VERTICAL_TITLES[vertical as Vertical]}
-      </h1>
+      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{meta.tagline}</h1>
+      <p className="mt-2 max-w-xl text-base text-ink-mute">{meta.blurb}</p>
 
       <div className="mt-6 max-w-2xl">
         <SearchBar defaultValue={sp.q} action={`/${vertical}`} />
       </div>
 
       <div className="mt-10 flex gap-10">
-        <FilterSidebar vertical={vertical as Vertical} selected={sp} />
+        <FilterSidebar vertical={v} selected={sp} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3 border-b border-ink-line pb-3">
-            <div className="text-sm text-ink-mute">
-              <span className="font-medium text-ink tabular-nums">
-                {result.total.toLocaleString()}
-              </span>{" "}
-              results
+            <div className="flex items-center gap-3">
+              <MobileFilterDrawer vertical={v} selected={sp} count={filterCount} />
+              <div className="text-sm text-ink-mute">
+                <span className="font-medium text-ink tabular-nums">
+                  {result.total.toLocaleString()}
+                </span>{" "}
+                results
+              </div>
             </div>
             <SortControl current={sort} />
           </div>
 
+          {filterCount > 0 && (
+            <div className="mt-4">
+              <FilterPills basePath={`/${vertical}`} params={sp} />
+            </div>
+          )}
+
           {result.items.length === 0 ? (
-            <EmptyState vertical={vertical as Vertical} />
+            <EmptyState vertical={v} />
           ) : (
             <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {result.items.map((listing) => (
@@ -222,7 +228,7 @@ function EmptyState({ vertical }: { vertical: Vertical }) {
       </div>
       <h2 className="mt-4 text-xl font-semibold">No listings yet</h2>
       <p className="mt-2 max-w-md text-sm text-ink-mute">
-        Nothing in {VERTICAL_TITLES[vertical].toLowerCase()} matches yet. Be the first to
+        Nothing in {VERTICAL_META[vertical].title.toLowerCase()} matches yet. Be the first to
         post — or have your agent post one for you.
       </p>
       <Link
