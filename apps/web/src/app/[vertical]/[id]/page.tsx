@@ -30,6 +30,13 @@ export default async function ListingDetailPage({
   const user = await getCurrentUser();
   const isSeller = user?.id === listing.sellerId;
 
+  // Seller profile snapshot for the "Listed by @handle" link.
+  const { data: seller } = await supabase
+    .from("profiles")
+    .select("handle, display_name, avatar_url")
+    .eq("id", listing.sellerId)
+    .maybeSingle();
+
   let initialSaved = false;
   if (user) {
     const { data: fav } = await supabase
@@ -117,6 +124,8 @@ export default async function ListingDetailPage({
             )}
           </div>
 
+          {seller && <SellerCard seller={seller} />}
+
           <DetailsGrid listing={listing} />
 
           {listing.description && (
@@ -136,6 +145,40 @@ export default async function ListingDetailPage({
         </div>
       </div>
     </div>
+  );
+}
+
+function SellerCard({
+  seller,
+}: {
+  seller: { handle: string | null; display_name: string | null; avatar_url: string | null };
+}) {
+  if (!seller.handle) return null;
+  const name = seller.display_name ?? `@${seller.handle}`;
+  const initial = (name ?? "?").trim().charAt(0).toUpperCase() || "?";
+  return (
+    <Link
+      href={`/profile/${seller.handle}`}
+      className="flex items-center gap-3 rounded-lg border border-ink-line p-3 transition hover:border-ink hover:bg-ink-fog/40"
+    >
+      {seller.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={seller.avatar_url}
+          alt=""
+          className="h-10 w-10 rounded-full object-cover"
+        />
+      ) : (
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-fog text-sm font-medium text-ink-mute">
+          {initial}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-xs uppercase tracking-widest text-ink-mute">Listed by</div>
+        <div className="truncate text-sm font-medium">{name}</div>
+      </div>
+      <span aria-hidden className="text-ink-mute">→</span>
+    </Link>
   );
 }
 
