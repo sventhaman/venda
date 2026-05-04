@@ -1,8 +1,29 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
 import { CategoryStrip } from "@/components/category-strip";
+import { ListingCard } from "@/components/listing-card";
+import { searchListings } from "@/lib/listings-server";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Mirror finn.no's "Populære annonser" — a 12-tile grid of recent listings
+  // mixed across all five verticals. Helps the homepage feel like a marketplace
+  // instead of an empty landing page, and gives a buyer something to click on
+  // before they've decided which vertical they want.
+  const supabase = await createClient();
+  const user = await getCurrentUser();
+  const [{ items: recent, total }, savedSet] = await Promise.all([
+    searchListings(supabase, { pageSize: 12, sort: "newest" }),
+    user
+      ? supabase
+          .from("listing_favorites")
+          .select("listing_id")
+          .eq("user_id", user.id)
+          .then(({ data }) => new Set((data ?? []).map((r) => r.listing_id as string)))
+      : Promise.resolve(new Set<string>()),
+  ]);
+
   return (
     <div className="mx-auto max-w-page px-6">
       <section className="py-16 md:py-24">
@@ -23,7 +44,33 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-ink-line bg-ink-fog/60 p-10 md:p-14">
+      {recent.length > 0 && (
+        <section className="pb-20">
+          <h2 className="mb-6 text-2xl font-semibold tracking-tight">Recent listings</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {recent.map((l) => (
+              <ListingCard
+                key={l.id}
+                listing={l}
+                signedIn={!!user}
+                isSaved={savedSet.has(l.id)}
+              />
+            ))}
+          </div>
+          {total > recent.length && (
+            <div className="mt-10 flex justify-center">
+              <Link
+                href="/search"
+                className="rounded-full border border-ink-line px-7 py-3 text-sm font-medium hover:border-ink hover:bg-ink-fog/60"
+              >
+                Show more ({total} listings)
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="mb-20 rounded-3xl border border-ink-line bg-ink-fog/60 p-10 md:p-14">
         <div className="grid gap-12 md:grid-cols-2">
           <div>
             <div className="text-xs font-medium uppercase tracking-widest text-ink-mute">
@@ -46,14 +93,24 @@ export default function HomePage() {
             </div>
           </div>
           <pre className="overflow-x-auto rounded-2xl bg-ink p-6 text-xs leading-relaxed text-white/90">
-{`# search across all verticals
-curl https://api.venda.sh/v1/listings?q=tesla+model+3&vertical=cars
+{`# search across all verticals (REST, public)
+curl "https://api.venda.sh/v1/listings?q=tesla+model+3&vertical=cars"
 
-# call via MCP
-{ "name": "search_listings",
-  "arguments": { "q": "studio apartment oslo",
-                 "vertical": "realestate",
-                 "maxPrice": 25000 } }`}
+# same search over MCP (JSON-RPC 2.0)
+curl -X POST https://api.venda.sh/mcp \\
+  -H "X-API-Key: venda_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+    "params": {
+      "name": "search_listings",
+      "arguments": {
+        "q": "studio apartment oslo",
+        "vertical": "realestate",
+        "maxPrice": 2500000
+      }
+    }
+  }'`}
           </pre>
         </div>
       </section>

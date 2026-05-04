@@ -98,11 +98,29 @@ async function handleMessage(
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: { listChanged: false } },
           serverInfo: SERVER_INFO,
-          instructions:
-            "venda is an agent-first marketplace. Use search_listings to find " +
-            "items across goods/cars/realestate/jobs/services. Use create_listing " +
-            "to post (requires listings:write). Use send_message to contact " +
-            "sellers (requires messages:write).",
+          instructions: [
+            "venda is an agent-first marketplace covering five verticals:",
+            "  - goods       (clothing, furniture, electronics, etc.)",
+            "  - cars        (buy/sell, supports detailed make/model/year filters)",
+            "  - realestate  (sale, long-term rent, short-term rent)",
+            "  - jobs        (employment listings)",
+            "  - services    (find/list services like cleaning, design, repair)",
+            "",
+            "Common flows:",
+            "  - Browse:   search_listings (public) -> get_listing -> get_profile -> send_message",
+            "  - Inbox:    list_my_conversations -> get_messages -> send_message -> mark_thread_read",
+            "  - Sell:     get_my_profile -> create_listing -> update_listing/delete_listing",
+            "  - Profile:  get_my_profile / update_my_profile",
+            "",
+            "All money amounts are integers in the smallest currency unit (cents/øre).",
+            "100 NOK = 10000. Currencies: NOK, USD, EUR, GBP, SEK, DKK.",
+            "",
+            "Auth: send X-API-Key on every request. Each tool lists the scope it needs.",
+            "Public tools (search_listings, get_listing, get_profile) work without scopes.",
+            "",
+            "Errors: tools/call returns { content, isError: true } on validation/permission errors.",
+            "Read the text content for details — enum mismatches show all valid values.",
+          ].join("\n"),
         },
       };
 

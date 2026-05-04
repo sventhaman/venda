@@ -1,4 +1,4 @@
-import { ListingSearchQuery, NewListing } from "@venda/schema";
+import { ListingSearchQuery, NewListing, ProfileUpdate } from "@venda/schema";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchListings, getListing } from "../lib/listings.js";
@@ -180,6 +180,174 @@ export async function callTool(
         .eq("user_id", ctx.userId)
         .order("conversations(last_message_at)", { ascending: false, nullsFirst: false });
 
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, data };
+    }
+
+    case "update_listing": {
+      const scopeCheck = requireScope(ctx, "listings:write");
+      if (scopeCheck) return scopeCheck;
+
+      const parsed = z
+        .object({
+          id: z.string().uuid(),
+          title: z.string().min(3).max(200).optional(),
+          description: z.string().max(20000).optional(),
+          status: z.enum(["draft", "active", "paused", "sold", "expired", "removed"]).optional(),
+          price: z
+            .object({
+              amount: z.number().int().nonnegative(),
+              currency: z.enum(["NOK", "USD", "EUR", "GBP", "SEK", "DKK"]),
+            })
+            .optional(),
+          images: z
+            .array(z.object({ url: z.string().url(), alt: z.string().optional() }))
+            .optional(),
+        })
+        .safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      const updates: Record<string, any> = {};
+      if (parsed.data.title !== undefined) updates.title = parsed.data.title;
+      if (parsed.data.description !== undefined) updates.description = parsed.data.description;
+      if (parsed.data.status !== undefined) updates.status = parsed.data.status;
+      if (parsed.data.price) {
+        updates.price_amount = parsed.data.price.amount;
+        updates.price_currency = parsed.data.price.currency;
+      }
+      if (parsed.data.images) updates.images = parsed.data.images;
+      if (parsed.data.status === "active") updates.published_at = new Date().toISOString();
+
+      // Defense in depth: agent path uses service-role client which bypasses
+      // RLS, so the explicit owner filter is what scopes the update.
+      const { error, count } = await ctx.supabase
+        .from("listings")
+        .update(updates, { count: "exact" })
+        .eq("id", parsed.data.id)
+        .eq("seller_id", ctx.userId);
+
+      if (error) return { ok: false, error: error.message };
+      if ((count ?? 0) === 0) return { ok: false, error: "not found or not yours" };
+
+      const full = await getListing(ctx.supabase, parsed.data.id);
+      return { ok: true, data: full };
+    }
+
+    case "delete_listing": {
+      const scopeCheck = requireScope(ctx, "listings:write");
+      if (scopeCheck) return scopeCheck;
+
+      const parsed = z.object({ id: z.string().uuid() }).safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      const { error, count } = await ctx.supabase
+        .from("listings")
+        .delete({ count: "exact" })
+        .eq("id", parsed.data.id)
+        .eq("seller_id", ctx.userId);
+
+      if (error) return { ok: false, error: error.message };
+      if ((count ?? 0) === 0) return { ok: false, error: "not found or not yours" };
+      return { ok: true, data: { id: parsed.data.id, deleted: true } };
+    }
+
+    case "get_messages": {
+      const scopeCheck = requireScope(ctx, "messages:read");
+      if (scopeCheck) return scopeCheck;
+
+      const parsed = z.object({ conversationId: z.string().uuid() }).safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      // Verify the caller is a participant before returning anything. Same
+      // defense-in-depth as the REST handler — agents bypass RLS.
+      const { data: membership } = await ctx.supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("conversation_id", parsed.data.conversationId)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+      if (!membership) return { ok: false, error: "not found" };
+
+      const { data, error } = await ctx.supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", parsed.data.conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, data };
+    }
+
+    case "mark_thread_read": {
+      const scopeCheck = requireScope(ctx, "messages:write");
+      if (scopeCheck) return scopeCheck;
+
+      const parsed = z.object({ conversationId: z.string().uuid() }).safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      const { error, count } = await ctx.supabase
+        .from("conversation_participants")
+        .update({ last_read_at: new Date().toISOString() }, { count: "exact" })
+        .eq("conversation_id", parsed.data.conversationId)
+        .eq("user_id", ctx.userId);
+
+      if (error) return { ok: false, error: error.message };
+      if ((count ?? 0) === 0) return { ok: false, error: "not a participant" };
+      return { ok: true, data: { ok: true } };
+    }
+
+    case "get_my_profile": {
+      const scopeCheck = requireScope(ctx, "profile:read");
+      if (scopeCheck) return scopeCheck;
+
+      const { data, error } = await ctx.supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", ctx.userId)
+        .maybeSingle();
+      if (error) return { ok: false, error: error.message };
+      if (!data) return { ok: false, error: "not found" };
+      return { ok: true, data };
+    }
+
+    case "get_profile": {
+      // Public — no scope required, mirrors the unauthenticated REST handler.
+      const parsed = z
+        .object({ handle: z.string().min(3).max(40) })
+        .safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      const { data, error } = await ctx.supabase
+        .from("profiles")
+        .select(
+          "id, handle, display_name, account_type, avatar_url, bio, country_code, is_verified, rating_avg, rating_count, created_at",
+        )
+        .eq("handle", parsed.data.handle)
+        .maybeSingle();
+      if (error) return { ok: false, error: error.message };
+      if (!data) return { ok: false, error: "not found" };
+      return { ok: true, data };
+    }
+
+    case "update_my_profile": {
+      const scopeCheck = requireScope(ctx, "profile:write");
+      if (scopeCheck) return scopeCheck;
+
+      const parsed = ProfileUpdate.safeParse(args);
+      if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+      const updates: Record<string, any> = {};
+      if (parsed.data.displayName !== undefined) updates.display_name = parsed.data.displayName;
+      if (parsed.data.avatarUrl !== undefined) updates.avatar_url = parsed.data.avatarUrl;
+      if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio;
+      if (parsed.data.countryCode !== undefined) updates.country_code = parsed.data.countryCode;
+
+      const { data, error } = await ctx.supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", ctx.userId)
+        .select()
+        .single();
       if (error) return { ok: false, error: error.message };
       return { ok: true, data };
     }

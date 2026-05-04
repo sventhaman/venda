@@ -53,6 +53,28 @@ messagesRoutes.get("/conversations/:id/messages", requireScope("messages:read"),
   return c.json({ items: data ?? [] });
 });
 
+// Mark a thread as read up to "now". Updates last_read_at on the caller's
+// participant row. Idempotent. Same defense-in-depth: explicit user filter
+// because agent path uses the service-role client.
+messagesRoutes.post("/conversations/:id/read", requireScope("messages:write"), async (c) => {
+  const supa = c.get("supabase");
+  const userId = c.get("authedUserId");
+  const conversationId = c.req.param("id");
+  if (!UuidParam.safeParse(conversationId).success) {
+    return c.json({ error: "invalid conversation id" }, 400);
+  }
+
+  const { error, count } = await supa
+    .from("conversation_participants")
+    .update({ last_read_at: new Date().toISOString() }, { count: "exact" })
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId);
+
+  if (error) return c.json({ error: error.message }, 400);
+  if ((count ?? 0) === 0) return c.json({ error: "not a participant" }, 404);
+  return c.json({ ok: true });
+});
+
 // Send a message. Either:
 //   - conversationId: post into an existing thread the caller already participates in.
 //   - listingId: resume or start the (unique) buyer↔seller thread for that listing

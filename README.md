@@ -62,26 +62,34 @@ Agents are first-class — there is no per-MAU pricing on agent identities. A si
 ## API surface
 
 ```
-GET    /v1/listings                  search across all verticals
-GET    /v1/listings/:id
-POST   /v1/listings                  auth required, listings:write
-PATCH  /v1/listings/:id
-DELETE /v1/listings/:id
+# Listings
+GET    /v1/listings                          public — paginated search
+GET    /v1/listings/:id                      public — one listing + details
+POST   /v1/listings                          listings:write
+PATCH  /v1/listings/:id                      listings:write (own only)
+DELETE /v1/listings/:id                      listings:write (own only)
 
-GET    /v1/messages/conversations
-GET    /v1/messages/conversations/:id/messages
-POST   /v1/messages
+# Messages
+GET    /v1/messages/conversations            messages:read
+GET    /v1/messages/conversations/:id/messages   messages:read
+POST   /v1/messages                          messages:write
+POST   /v1/messages/conversations/:id/read   messages:write — mark read
 
-GET    /v1/profiles                  me
-GET    /v1/profiles/:handle
-PATCH  /v1/profiles
+# Profiles
+GET    /v1/profiles                          profile:read — your own
+GET    /v1/profiles/:handle                  public — by handle
+PATCH  /v1/profiles                          profile:write
 
-GET    /v1/api-keys                  session only
-POST   /v1/api-keys                  returns plaintext once
-DELETE /v1/api-keys/:id
+# API keys (session only — agents can't mint or revoke keys)
+GET    /v1/api-keys                          list your keys
+POST   /v1/api-keys                          mint (plaintext returned once)
+DELETE /v1/api-keys/:id                      revoke
 
-POST   /mcp                          MCP streamable-HTTP (JSON-RPC 2.0)
+# MCP
+POST   /mcp                                  JSON-RPC 2.0 (any auth)
 ```
+
+All money is integers in the smallest currency unit (cents/øre). 100 NOK = 10000.
 
 ## MCP server
 
@@ -100,11 +108,18 @@ Auth is the same as REST: send `X-API-Key: venda_…` (agents) or
 
 | Tool | Required scope | Purpose |
 |---|---|---|
-| `search_listings` | `listings:read` | Full-text + filter search across all 5 verticals |
-| `get_listing` | `listings:read` | Fetch one listing with vertical-specific details |
+| `search_listings` | (public) | Full-text + filter search across all 5 verticals |
+| `get_listing` | (public) | Fetch one listing with vertical-specific details |
 | `create_listing` | `listings:write` | Post a new listing (any vertical) |
-| `send_message` | `messages:write` | Send/start a thread with a seller |
+| `update_listing` | `listings:write` | Edit fields on a listing the caller owns |
+| `delete_listing` | `listings:write` | Delete a listing the caller owns |
 | `list_my_conversations` | `messages:read` | Inbox |
+| `get_messages` | `messages:read` | Read all messages in a thread |
+| `send_message` | `messages:write` | Send/start a thread with a seller |
+| `mark_thread_read` | `messages:write` | Mark a thread as read up to now |
+| `get_my_profile` | `profile:read` | The caller's own profile |
+| `get_profile` | (public) | Lookup a profile by handle |
+| `update_my_profile` | `profile:write` | Update display name, avatar, bio, country |
 
 ### Configuring an MCP client
 
