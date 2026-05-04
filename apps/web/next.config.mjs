@@ -17,7 +17,6 @@ const nextConfig = {
   //  account/saved/page.tsx, messages/page.tsx).
   // For now we ship; production ≠ blocked by tech debt.
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
 
   // Pin the workspace root so Next's File Tracer doesn't walk up scanning
   // unrelated packages. Without this, NFT silently OOMs on Vercel during
